@@ -139,7 +139,8 @@ const App = {
       showConnections: true,
       openToWork: false,
       twoFactor: false,
-    }
+    },
+    messageGuide: {}
   },
 
   init() {
@@ -449,7 +450,23 @@ const App = {
   // ── Modal helpers for app.html static modals ─────────────────
   openModal(id) {
     const overlay = document.getElementById(id + '-overlay');
-    if (overlay) { overlay.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    // Reset apply modal to step 1 each time it's opened
+    if (id === 'apply-modal') {
+      this._applyCurrentStep = 1;
+      document.querySelectorAll('.li-apply-step').forEach((el, i) => {
+        el.classList.toggle('active', i === 0);
+      });
+      document.querySelectorAll('.li-apply-dot').forEach(el => el.classList.remove('done'));
+      const backBtn = document.getElementById('apply-back-btn');
+      const nextBtn = document.getElementById('apply-next-btn');
+      if (backBtn) backBtn.style.display = 'none';
+      if (nextBtn) nextBtn.textContent = 'Next';
+      // Clear text inputs (not selects/checkboxes which might be intentional)
+      overlay.querySelectorAll('input[type="text"], input[type="email"], input[type="url"], textarea').forEach(el => { el.value = ''; });
+    }
   },
 
   closeModal(id) {
@@ -576,7 +593,26 @@ const App = {
 
   showToast(msg, type) {
     createToast(msg, type || 'info');
-  }
+  },
+
+  // Alias used by static nav in app.html — shows suggestions in #nav-suggestions
+  onSearchInput: debounce(function(val) {
+    App.state.searchQuery = val;
+    const sugg = document.getElementById('nav-suggestions');
+    if (!sugg) return;
+    if (!val.trim()) { sugg.innerHTML = ''; sugg.style.display = 'none'; return; }
+    const data = window.LinkedInData;
+    const results = [];
+    if (data?.users) data.users.filter(u => u.name.toLowerCase().includes(val.toLowerCase())).slice(0, 3).forEach(u =>
+      results.push(`<div class="sugg-item" onclick="App.state.searchQuery='${escapeHtml(u.name)}';window.location.hash='search';document.getElementById('nav-suggestions').style.display='none'"><span class="sugg-icon">👤</span>${escapeHtml(u.name)}<span style="font-size:11px;color:var(--text-3);margin-left:auto;">${escapeHtml((u.headline||'').slice(0,30))}</span></div>`)
+    );
+    if (data?.jobs) data.jobs.filter(j => j.title.toLowerCase().includes(val.toLowerCase())).slice(0, 2).forEach(j =>
+      results.push(`<div class="sugg-item" onclick="window.location.hash='job/${j.id}';document.getElementById('nav-suggestions').style.display='none'"><span class="sugg-icon">💼</span>${escapeHtml(j.title)}</div>`)
+    );
+    results.push(`<div class="sugg-item sugg-search-all" onclick="App.state.searchQuery='${escapeHtml(val)}';window.location.hash='search';document.getElementById('nav-suggestions').style.display='none'"><span class="sugg-icon">🔍</span>Search for &ldquo;${escapeHtml(val)}&rdquo;</div>`);
+    sugg.innerHTML = results.join('');
+    sugg.style.display = 'block';
+  }, 250)
 };
 
 // ============================================================
@@ -598,7 +634,7 @@ function renderFeed() {
         </div>
         <div class="li-profile-card__info">
           <a href="#profile" class="li-profile-card__name">${escapeHtml(u.name)}</a>
-          ${u.isPremium ? `<span style="background:#e8a000;color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;margin-left:4px;vertical-align:middle;">IN</span>` : ''}
+          ${u.isPremium ? `<span style="background:var(--premium-gold);color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;margin-left:4px;vertical-align:middle;">IN</span>` : ''}
           <div class="li-profile-card__headline">${escapeHtml((u.headline||'').split('|')[0].trim())}</div>
           ${u.location ? `<div style="font-size:12px;color:var(--text-2);margin-top:2px;">${escapeHtml(u.location)}</div>` : ''}
         </div>
@@ -613,7 +649,7 @@ function renderFeed() {
           </div>
         </div>
         <div class="li-profile-card__premium" onclick="App.navigate('premium')">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="#e8a000"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6L8 1Z"/></svg>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="var(--premium-gold)"><path d="M8 1L10 6H15L11 9.5L12.5 15L8 12L3.5 15L5 9.5L1 6H6L8 1Z"/></svg>
           <span>Try <b>Premium</b> for free</span>
         </div>
         <div class="li-profile-card__links">
@@ -781,7 +817,7 @@ function _renderSponsoredPost(idx) {
       </button>
     </div>
     <div style="margin:10px 0;font-size:15px;color:var(--text);line-height:1.6;">${ad.desc}</div>
-    <div style="height:160px;${ad.img};border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;overflow:hidden;">
+    <div style="height:160px;background:${ad.img};border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;overflow:hidden;">
       <div style="text-align:center;color:white;padding:20px;">
         <div style="font-size:20px;font-weight:800;margin-bottom:4px;">${ad.tagline}</div>
         <div style="font-size:13px;opacity:.8;">${ad.company}</div>
@@ -914,7 +950,7 @@ function renderPostCard(post) {
       <div class="li-post__author-info">
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
           <a href="#profile/${authorId}" class="li-post__author-name">${escapeHtml(authorName)}</a>
-          ${isPremium ? `<span style="background:#e8a000;color:white;font-size:9px;font-weight:700;padding:1px 4px;border-radius:2px;">IN</span>` : ''}
+          ${isPremium ? `<span style="background:var(--premium-gold);color:white;font-size:9px;font-weight:700;padding:1px 4px;border-radius:2px;">IN</span>` : ''}
           ${App.state.connections.has(String(authorId)) ? `<span style="font-size:12px;color:var(--text-2);font-weight:400;">· 1st</span>` : `<span style="font-size:12px;color:var(--text-2);font-weight:400;">· 2nd</span>`}
         </div>
         <div class="li-post__author-headline">${escapeHtml(authorHeadline)}</div>
@@ -1165,7 +1201,7 @@ function updatePostCharCount(ta, max) {
   const btn = document.getElementById('post-submit-btn');
   if (counter) {
     counter.textContent = remaining >= 0 ? remaining + ' remaining' : Math.abs(remaining) + ' over limit';
-    counter.style.color = remaining < 0 ? '#cc1016' : remaining < 200 ? '#b45309' : 'var(--text-3)';
+    counter.style.color = remaining < 0 ? 'var(--red)' : remaining < 200 ? 'var(--orange)' : 'var(--text-3)';
   }
   if (btn) {
     const hasText = ta.value.trim().length > 0 && remaining >= 0;
@@ -1177,13 +1213,18 @@ function updatePostCharCount(ta, max) {
 function submitPost() {
   const textarea = document.getElementById('post-modal-text');
   if (!textarea || !textarea.value.trim()) { createToast('Please write something first!','warning'); return; }
+  const btn = document.getElementById('post-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Posting…'; btn.style.opacity = '0.7'; }
   const u = App.state.currentUser;
   const newPost = { id: Date.now(), authorId: u.id, authorName: u.name, authorHeadline: u.headline||'', content: textarea.value.trim(), reactions: { like: 0 }, comments: [], reposts: 0, timestamp: Date.now() };
-  App.state.feedPosts.unshift(newPost);
-  closeModal();
-  createToast('Post shared!','success');
-  const feedPosts = document.getElementById('feed-posts');
-  if (feedPosts) feedPosts.insertAdjacentHTML('afterbegin', renderPostCard(newPost));
+  // Simulate brief network delay for realism
+  setTimeout(() => {
+    App.state.feedPosts.unshift(newPost);
+    closeModal();
+    createToast('Post shared! 🎉', 'success');
+    const feedPosts = document.getElementById('feed-posts');
+    if (feedPosts) feedPosts.insertAdjacentHTML('afterbegin', renderPostCard(newPost));
+  }, 400);
 }
 function openImageLightbox(src) {
   const overlay = document.createElement('div');
@@ -1264,12 +1305,12 @@ function renderProfile(userId) {
           <div style="position:absolute;top:-60px;left:24px;border-radius:50%;${user.openToWork ? 'box-shadow:0 0 0 4px var(--green),0 0 0 7px var(--white);' : 'border:4px solid var(--white);'}overflow:hidden;width:128px;height:128px;display:flex;align-items:center;justify-content:center;background:var(--white);">
             ${generateAvatar(user.name, 120, user.avatarColor)}
           </div>
-          ${user.openToWork ? `<div style="position:absolute;top:${60}px;left:20px;background:#057642;color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;border:2px solid var(--white);letter-spacing:.3px;">#OPEN TO WORK</div>` : ''}
+          ${user.openToWork ? `<div style="position:absolute;top:${60}px;left:20px;background:var(--green);color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;border:2px solid var(--white);letter-spacing:.3px;">#OPEN TO WORK</div>` : ''}
           ${isOwn ? `<button onclick="createToast('Edit profile photo','info')" style="position:absolute;top:-30px;left:84px;background:rgba(255,255,255,0.9);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2);">✏️</button>` : ''}
           <!-- Action buttons top-right -->
           <div style="display:flex;justify-content:flex-end;padding-top:12px;gap:8px;flex-wrap:wrap;min-height:52px;">
             ${isOwn ? `
-              <button onclick="createToast('Open to work options','info')" style="background:#057642;color:white;border:none;border-radius:20px;padding:6px 16px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">Open to <svg viewBox="0 0 16 16" width="14" height="14" fill="white"><path d="M4 6l4 4 4-4"/></svg></button>
+              <button onclick="createToast('Open to work options','info')" style="background:var(--green);color:white;border:none;border-radius:20px;padding:6px 16px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">Open to <svg viewBox="0 0 16 16" width="14" height="14" fill="white"><path d="M4 6l4 4 4-4"/></svg></button>
               <button onclick="createToast('Add profile section','info')" style="border:1.5px solid var(--blue);color:var(--blue);background:none;border-radius:20px;padding:6px 16px;font-size:14px;font-weight:600;cursor:pointer;">Add profile section</button>
               <button onclick="openEditProfileModal()" style="border:1.5px solid var(--blue);color:var(--blue);background:none;border-radius:20px;padding:6px 16px;font-size:14px;font-weight:600;cursor:pointer;">Enhance profile</button>
               <button onclick="createToast('Resources','info')" style="border:1.5px solid var(--border-2);color:var(--text);background:none;border-radius:20px;padding:6px 16px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">Resources <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4 6l4 4 4-4"/></svg></button>
@@ -1283,7 +1324,7 @@ function renderProfile(userId) {
           <div style="margin-top:56px;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
               <h1 style="font-size:24px;font-weight:700;margin:0;">${escapeHtml(user.name)}</h1>
-              ${user.isPremium ? `<span style="background:#e8a000;color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.5px;">IN</span>` : ''}
+              ${user.isPremium ? `<span style="background:var(--premium-gold);color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.5px;">IN</span>` : ''}
               ${user.pronouns ? `<span style="font-size:14px;color:var(--text-2);">(${escapeHtml(user.pronouns)})</span>` : ''}
             </div>
             <div style="font-size:16px;color:var(--text);margin-bottom:6px;line-height:1.4;">${escapeHtml(user.headline||'')}</div>
@@ -1299,10 +1340,10 @@ function renderProfile(userId) {
       </div>
 
       <!-- Open to Work banner -->
-      ${user.openToWork && isOwn ? `<div class="li-card" style="padding:16px 20px;margin-bottom:8px;border-left:4px solid #057642;">
+      ${user.openToWork && isOwn ? `<div class="li-card" style="padding:16px 20px;margin-bottom:8px;border-left:4px solid var(--green);">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <div style="font-weight:700;font-size:15px;color:#057642;">#OpenToWork</div>
+            <div style="font-weight:700;font-size:15px;color:var(--green);">#OpenToWork</div>
             <div style="font-size:13px;color:var(--text-2);margin-top:2px;">You are open to: ${(user.openToWorkTypes||['Full-time']).join(', ')}</div>
           </div>
           <button onclick="createToast('Edit Open To Work preferences','info')" style="border:none;background:none;cursor:pointer;color:var(--blue);font-size:13px;font-weight:600;">Edit</button>
@@ -1562,7 +1603,7 @@ function renderProfile(userId) {
               <div style="font-size:20px;font-weight:700;color:var(--text);">${val}</div>
               <div style="font-size:11px;color:var(--text);margin-top:2px;font-weight:600;">${label}</div>
               <div style="font-size:11px;color:var(--text-2);margin-top:2px;">${sub}</div>
-              <div style="font-size:11px;color:#057642;font-weight:600;margin-top:3px;">↑ ${trend}</div>
+              <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:3px;">↑ ${trend}</div>
             </div>`
           ).join('')}
         </div>
@@ -1701,8 +1742,8 @@ function switchTab(tabGroup, tabName, contentId) {
 
 function toggleConnect(userId, btn) {
   const connected = App.state.connections.has(String(userId));
-  if (connected) { App.state.connections.delete(String(userId)); btn.textContent = 'Connect'; btn.style.background = 'var(--blue)'; btn.style.color = 'white'; }
-  else { App.state.connections.add(String(userId)); btn.textContent = 'Connected'; btn.style.background = 'white'; btn.style.color = 'var(--blue)'; createToast('Connection request sent!','success'); }
+  if (connected) { App.state.connections.delete(String(userId)); btn.textContent = 'Connect'; btn.style.background = 'var(--blue)'; btn.style.color = 'white'; btn.style.border = '1.5px solid var(--blue)'; }
+  else { App.state.connections.add(String(userId)); btn.textContent = '✓ Connected'; btn.style.background = 'transparent'; btn.style.color = 'var(--blue)'; btn.style.border = '1.5px solid var(--blue)'; createToast('Connection request sent! 🎉', 'success'); }
 }
 
 function openEditProfileModal() {
@@ -2151,7 +2192,7 @@ function renderJobDetail(jobId) {
   const postedLabel = _jobPostedLabel(job);
   const applicantsLabel = job.applicants ? (String(job.applicants).startsWith('Over') ? job.applicants : formatNumber(job.applicants) + '+') : '100+';
   return `<div class="li-card" style="padding:24px;position:relative;">
-    ${job.matchScore ? `<div style="position:absolute;top:16px;right:16px;background:${job.matchScore>=80?'#057642':job.matchScore>=60?'#b45309':'var(--text-3)'};color:white;border-radius:12px;padding:3px 10px;font-size:12px;font-weight:700;">${job.matchScore}% match</div>` : ''}
+    ${job.matchScore ? `<div style="position:absolute;top:16px;right:16px;background:${job.matchScore>=80?'var(--green)':job.matchScore>=60?'var(--orange)':'var(--text-3)'};color:white;border-radius:12px;padding:3px 10px;font-size:12px;font-weight:700;">${job.matchScore}% match</div>` : ''}
     <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:20px;">
       <div style="flex-shrink:0;width:64px;height:64px;${logo?'background:var(--bg);':'background:'+getAvatarColor(job.company)+';'}border-radius:8px;display:flex;align-items:center;justify-content:center;${logo?'font-size:28px;':'color:white;font-weight:700;font-size:22px;'}">${logo || getInitials(job.company)}</div>
       <div style="flex:1;padding-right:60px;">
@@ -2161,13 +2202,13 @@ function renderJobDetail(jobId) {
         </div>
         <div style="font-size:13px;color:var(--text-2);">${escapeHtml(job.location)}${remoteLabel ? ' · ' + escapeHtml(remoteLabel) : ''}${job.type ? ' · ' + escapeHtml(job.type) : ''}</div>
         <div style="font-size:13px;color:var(--text-2);margin-top:4px;">${postedLabel ? 'Posted ' + escapeHtml(postedLabel) + ' · ' : ''}${applicantsLabel} applicants</div>
-        ${job.salary ? `<div style="font-size:14px;color:#057642;font-weight:600;margin-top:4px;">💰 ${escapeHtml(job.salary)}</div>` : ''}
+        ${job.salary ? `<div style="font-size:14px;color:var(--green);font-weight:600;margin-top:4px;">💰 ${escapeHtml(job.salary)}</div>` : ''}
       </div>
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
       ${job.easyApply
-        ? `<button onclick="App.applyStepNext?openModal&&openEasyApply(${job.id}):createToast('Application started!','success')" style="background:var(--blue);color:white;border:none;border-radius:20px;padding:10px 24px;font-size:15px;font-weight:600;cursor:pointer;">Easy Apply</button>`
+        ? `<button onclick="App.openModal('apply-modal')" style="background:var(--blue);color:white;border:none;border-radius:20px;padding:10px 24px;font-size:15px;font-weight:600;cursor:pointer;">Easy Apply</button>`
         : `<button onclick="createToast('Redirecting to company site...','info')" style="background:var(--blue);color:white;border:none;border-radius:20px;padding:10px 24px;font-size:15px;font-weight:600;cursor:pointer;">Apply Now</button>`
       }
       <button onclick="toggleSaveJob(${job.id}, this, null)" style="border:1px solid var(--blue);color:var(--blue);background:none;border-radius:20px;padding:10px 24px;font-size:15px;font-weight:600;cursor:pointer;">${saved ? '✓ Saved' : 'Save'}</button>
@@ -2248,6 +2289,66 @@ function renderJobDetail(jobId) {
     </div>
   </div>`;
 }
+
+// ============================================================
+// OUTREACH MESSAGE GUIDE — CONSTANTS
+// ============================================================
+const _OUTREACH_GOALS = [
+  { key: 'advice',   icon: '💡', label: 'Ask for Advice',    desc: 'Career guidance from a pro' },
+  { key: 'job',      icon: '💼', label: 'Job / Internship',  desc: 'Express interest in a role' },
+  { key: 'network',  icon: '🤝', label: 'Build Network',     desc: 'Connect in your field' },
+  { key: 'mentor',   icon: '🎓', label: 'Find a Mentor',     desc: 'Request ongoing guidance' },
+  { key: 'followup', icon: '✉️',  label: 'Follow Up',         desc: 'After meeting or applying' },
+  { key: 'referral', icon: '⭐', label: 'Ask for Referral',  desc: 'Request a job referral' },
+];
+
+const _OUTREACH_TEMPLATES = {
+  advice: [
+    { tone: 'Warm',
+      template: (d) => `Hi ${d.recipient||'[Name]'},\n\nI'm ${d.yourRole||'[your name/major]'} and I've been following your work in ${d.field||'[their field]'}. I'd love to learn from your experience — would you have 15–20 minutes for a quick chat sometime?\n\nThanks so much for considering it!` },
+    { tone: 'Professional',
+      template: (d) => `Hello ${d.recipient||'[Name]'},\n\nMy name is ${d.yourRole||'[your name]'} and I'm currently studying ${d.field||'[field]'}. I came across your profile and was impressed by your background. I'd greatly appreciate any insights you could share about your career path.\n\nWould you be open to a brief informational chat?` },
+  ],
+  job: [
+    { tone: 'Direct',
+      template: (d) => `Hi ${d.recipient||'[Name]'},\n\nI saw the ${d.role||'[role]'} opening at ${d.company||'[Company]'} and I'm very interested! I'm a ${d.yourRole||'[your background]'} with relevant skills and I'd love to learn more about the team.\n\nWould you be open to a quick conversation?` },
+    { tone: 'Enthusiastic',
+      template: (d) => `Hello ${d.recipient||'[Name]'},\n\nI'm really excited about the ${d.role||'[role]'} role at ${d.company||'[Company]'} — your team's work in ${d.field||'[field]'} is exactly where I want to grow. As a ${d.yourRole||'[your background]'}, I believe I'd be a great fit.\n\nI'd love to connect and learn more!` },
+  ],
+  network: [
+    { tone: 'Friendly',
+      template: (d) => `Hi ${d.recipient||'[Name]'},\n\nI'm ${d.yourRole||'[your name/role]'} and I'm building my network in ${d.field||'[field/industry]'}. Your profile really stood out to me!\n\nI'd love to connect and follow your work. Hope you're open to it!` },
+    { tone: 'Professional',
+      template: (d) => `Hello ${d.recipient||'[Name]'},\n\nI'm ${d.yourRole||'[your name]'}, a ${d.field||'[field]'} professional${d.company?' at '+d.company:''}. I came across your profile and would love to add you to my network for potential future collaboration.\n\nLooking forward to connecting!` },
+  ],
+  mentor: [
+    { tone: 'Sincere',
+      template: (d) => `Hi ${d.recipient||'[Name]'},\n\nI'm ${d.yourRole||'[your name/major]'} and I've been really inspired by your journey in ${d.field||'[field]'}. I'm at an early stage in my career and would be incredibly grateful for any guidance you could offer.\n\nWould you be open to a mentoring relationship, even informally?` },
+    { tone: 'Humble',
+      template: (d) => `Hello ${d.recipient||'[Name]'},\n\nMy name is ${d.yourRole||'[your name]'} and I'm working toward a career in ${d.field||'[field]'}. Your path has been really motivating to read about. Even a short conversation would mean a lot to me.\n\nThank you for your time!` },
+  ],
+  followup: [
+    { tone: 'Prompt',
+      template: (d) => `Hi ${d.recipient||'[Name]'},\n\nIt was great ${d.context||'meeting you recently'}! I wanted to follow up and say I really enjoyed our conversation${d.company?' about '+d.company:''}.\n\nI'd love to stay in touch — looking forward to connecting further!` },
+    { tone: 'Professional',
+      template: (d) => `Hello ${d.recipient||'[Name]'},\n\nI'm following up after ${d.context||'our recent interaction'}. Thank you for your time — I found it really valuable.\n\n${d.company?'I remain very interested in '+d.company+' and ':''}I hope we can stay connected!` },
+  ],
+  referral: [
+    { tone: 'Gracious',
+      template: (d) => `Hi ${d.recipient||'[Name]'},\n\nI hope you're doing well! I'm ${d.yourRole||'[your name]'} and I recently applied for the ${d.role||'[role]'} position at ${d.company||'[Company]'}. I know this is a big ask, but would you be comfortable referring me?\n\nI'd be happy to share my resume and portfolio. Thank you so much!` },
+    { tone: 'Direct',
+      template: (d) => `Hello ${d.recipient||'[Name]'},\n\nI applied for the ${d.role||'[role]'} role at ${d.company||'[Company]'} and noticed you work there. I'm ${d.yourRole||'[your background]'} — would you be open to referring me if you think I'm a good fit?\n\nI can send over my materials anytime. Thanks!` },
+  ],
+};
+
+const _OUTREACH_TIPS = {
+  advice:   ['Keep it under 150 words — professionals are busy', 'Mention a specific project or article of theirs', 'Ask for a specific time commitment (e.g. 15 min)', "Don't ask for a job — just a conversation"],
+  job:      ['Reference the specific role title', "Show you've researched the company", 'Mention one concrete skill or achievement', 'Attach your resume or portfolio link'],
+  network:  ['Explain why you want to connect specifically', 'Find common ground (school, interest, city)', 'Keep it short and genuine', "Don't pitch anything on the first message"],
+  mentor:   ["Be specific about what guidance you're seeking", "Show you've done your homework on their work", 'Make it easy to say no — low pressure ask', 'Offer flexibility: even async advice helps'],
+  followup: ['Send within 24–48 hours of meeting', 'Reference a specific moment from your conversation', 'Include a next step or question', 'Keep it brief — they remember you'],
+  referral: ["Only ask someone who knows your work quality", 'Make it easy — provide resume + role link', 'Give them an out ("only if you feel comfortable")', 'Thank them regardless of outcome'],
+};
 
 // ============================================================
 // MESSAGING PAGE
@@ -2355,7 +2456,7 @@ function renderConversationItem(conv, activeId) {
   return `<div class="li-msg-conv ${isActive?'active':''} ${c.unread?'unread':''}" data-tab="${tabLabel}" data-unread="${c.unread>0?'true':'false'}" onclick="window.location.hash='messaging/${c.id}'">
     <div style="position:relative;flex-shrink:0;">
       <div class="li-msg-conv__photo">${generateAvatar(c.name, 48, c.avatarColor)}</div>
-      ${c.online ? `<div style="position:absolute;bottom:2px;right:2px;width:10px;height:10px;background:#057642;border:2px solid var(--white);border-radius:50%;"></div>` : ''}
+      ${c.online ? `<div style="position:absolute;bottom:2px;right:2px;width:10px;height:10px;background:var(--green);border:2px solid var(--white);border-radius:50%;"></div>` : ''}
     </div>
     <div class="li-msg-conv__info">
       <div class="li-msg-conv__name">
@@ -2371,18 +2472,19 @@ function renderConversationItem(conv, activeId) {
 function renderChatPanel(conv) {
   const c = _convNormalize(conv);
   const messages = c.messages;
+  const hasSentMessages = messages.some(m => m.from === 'me');
   return `<div style="display:flex;flex-direction:column;height:100%;background:var(--white);">
     <!-- Chat header -->
     <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--white);">
       <a href="#profile/${c.participantId}" style="display:flex;gap:10px;align-items:center;text-decoration:none;">
         <div style="position:relative;flex-shrink:0;">
           <div style="border-radius:50%;overflow:hidden;">${generateAvatar(c.name, 44, c.avatarColor)}</div>
-          <div style="position:absolute;bottom:1px;right:1px;width:10px;height:10px;background:${c.online?'#057642':'#ccc'};border:2px solid var(--white);border-radius:50%;"></div>
+          <div style="position:absolute;bottom:1px;right:1px;width:10px;height:10px;background:${c.online?'var(--green)':'var(--border-2)'};border:2px solid var(--white);border-radius:50%;"></div>
         </div>
         <div>
           <div style="font-weight:700;font-size:15px;color:var(--text);">${escapeHtml(c.name)}</div>
           <div style="font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:4px;">
-            ${c.online ? `<span style="color:#057642;">● Active now</span>` : escapeHtml(c.headline)}
+            ${c.online ? `<span style="color:var(--green);">● Active now</span>` : escapeHtml(c.headline)}
           </div>
         </div>
       </a>
@@ -2401,6 +2503,17 @@ function renderChatPanel(conv) {
 
     <!-- Messages -->
     <div id="chat-messages-${c.id}" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:4px;background:var(--bg);">
+      ${!hasSentMessages ? `<div id="guide-banner-${c.id}" class="li-msg-guide__banner">
+        <span class="li-msg-guide__banner-icon">✨</span>
+        <div style="min-width:0;">
+          <div style="font-weight:700;font-size:13px;color:var(--text);">First time reaching out?</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:2px;line-height:1.4;">Use our Outreach Guide to draft a confident, personalized first message.</div>
+        </div>
+        <button class="li-msg-guide__banner-btn" onclick="openMessageGuide(${c.id})">Try the Guide</button>
+        <button class="li-msg-guide__banner-dismiss" onclick="this.closest('.li-msg-guide__banner').style.display='none'" title="Dismiss" aria-label="Dismiss banner">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>` : ''}
       ${messages.map((m, idx) => {
         const isMe = m.from === 'me';
         const showAvatar = !isMe && (idx === messages.length - 1 || messages[idx+1]?.from === 'me');
@@ -2422,6 +2535,9 @@ function renderChatPanel(conv) {
       </div>
     </div>
 
+    <!-- Outreach Guide panel (slides up above input) -->
+    ${_renderMessageGuide(conv)}
+
     <!-- Input area -->
     <div style="padding:10px 12px;border-top:1px solid var(--border);background:var(--white);flex-shrink:0;">
       <div style="display:flex;gap:6px;align-items:flex-end;border:1.5px solid var(--border-2);border-radius:8px;padding:6px 10px;background:var(--white);" onfocusin="this.style.borderColor='var(--blue)'" onfocusout="this.style.borderColor='var(--border-2)'">
@@ -2429,12 +2545,294 @@ function renderChatPanel(conv) {
           <button onclick="createToast('Attach','info')" style="background:none;border:none;cursor:pointer;color:var(--text-2);padding:2px;" title="Attach"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg></button>
           <button onclick="createToast('Add image','info')" style="background:none;border:none;cursor:pointer;color:var(--text-2);padding:2px;" title="Image"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></button>
           <button onclick="createToast('Add emoji','info')" style="background:none;border:none;cursor:pointer;color:var(--text-2);padding:2px;font-size:16px;" title="Emoji">😊</button>
+          <button class="li-msg-guide__trigger" onclick="openMessageGuide(${c.id})" title="Outreach Guide — get help drafting your first message">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 6v4m0 4h.01"/></svg>
+            ✨ Guide
+          </button>
         </div>
         <textarea id="msg-input-${c.id}" placeholder="Write a message…" style="flex:1;border:none;outline:none;font-size:14px;resize:none;max-height:100px;font-family:inherit;background:transparent;line-height:1.4;" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage(${c.id})}" oninput="autoResizeTextarea(this)"></textarea>
         <button onclick="sendMessage(${c.id})" style="background:none;border:none;cursor:pointer;flex-shrink:0;color:var(--blue);" title="Send">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
         </button>
       </div>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// OUTREACH MESSAGE GUIDE — FUNCTIONS
+// ============================================================
+function openMessageGuide(convId) {
+  const panel = document.getElementById('msg-guide-' + convId);
+  if (!panel) return;
+  if (panel.style.display !== 'none') { closeMessageGuide(convId); return; }
+  if (!App.state.messageGuide[convId]) {
+    App.state.messageGuide[convId] = { step: 1, goal: null, variantIdx: 0, details: {} };
+  } else {
+    // Keep existing goal/details but go back to step 1 so user can review or change
+    App.state.messageGuide[convId].step = 1;
+  }
+  panel.style.display = 'flex';
+  panel.style.animation = 'slideUpGuide 0.25s ease';
+  _showGuideStep(convId, App.state.messageGuide[convId].step);
+  // Update trigger button to show "active" state
+  const trigger = panel.closest('[style*="flex-direction:column"]')?.querySelector('.li-msg-guide__trigger');
+  if (trigger) trigger.style.background = 'rgba(10,102,194,0.12)';
+  // Escape key closes the guide
+  const handler = (e) => { if (e.key === 'Escape') { closeMessageGuide(convId); document.removeEventListener('keydown', handler); } };
+  document.addEventListener('keydown', handler);
+}
+
+function closeMessageGuide(convId) {
+  const panel = document.getElementById('msg-guide-' + convId);
+  if (!panel) return;
+  panel.style.animation = 'slideDownGuide 0.2s ease forwards';
+  setTimeout(() => { panel.style.display = 'none'; }, 200);
+}
+
+function _showGuideStep(convId, step) {
+  const state = App.state.messageGuide[convId];
+  if (!state) return;
+  state.step = step;
+  [1, 2, 3].forEach(s => {
+    const dot = document.getElementById('guide-dot-' + convId + '-' + s);
+    if (dot) dot.className = 'li-msg-guide__dot' + (s === step ? ' active' : s < step ? ' done' : '');
+    const stepEl = document.getElementById('guide-step-' + convId + '-' + s);
+    if (stepEl) stepEl.style.display = s === step ? 'block' : 'none';
+  });
+  const backBtn = document.getElementById('guide-back-' + convId);
+  const nextBtn = document.getElementById('guide-next-' + convId);
+  if (backBtn) backBtn.style.display = step > 1 ? 'inline-flex' : 'none';
+  if (nextBtn) {
+    if (step === 3) {
+      nextBtn.style.display = 'none';
+    } else {
+      nextBtn.style.display = 'inline-flex';
+      const label = step === 2 ? 'Preview' : 'Next';
+      nextBtn.innerHTML = label + ' <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+    }
+  }
+  if (step === 3) previewOutreachMessage(convId);
+}
+
+function selectMessageGoal(convId, goalKey) {
+  if (!App.state.messageGuide[convId]) App.state.messageGuide[convId] = { step: 1, goal: null, variantIdx: 0, details: {} };
+  App.state.messageGuide[convId].goal = goalKey;
+  App.state.messageGuide[convId].variantIdx = 0;
+  _OUTREACH_GOALS.forEach(g => {
+    const tile = document.getElementById('goal-tile-' + convId + '-' + g.key);
+    if (tile) tile.className = 'li-msg-guide__goal-tile' + (g.key === goalKey ? ' selected' : '');
+  });
+  _updateGuideTips(convId);
+  setTimeout(() => _showGuideStep(convId, 2), 300);
+}
+
+function _updateGuideTips(convId) {
+  const state = App.state.messageGuide[convId];
+  if (!state || !state.goal) return;
+  const tips = _OUTREACH_TIPS[state.goal] || [];
+  const tipsEl = document.getElementById('guide-tips-' + convId);
+  if (tipsEl) {
+    tipsEl.innerHTML = tips.map(t =>
+      `<div class="li-msg-guide__tip"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>${escapeHtml(t)}</span></div>`
+    ).join('');
+  }
+}
+
+function previewOutreachMessage(convId) {
+  const state = App.state.messageGuide[convId];
+  if (!state || !state.goal) return;
+  const variants = _OUTREACH_TEMPLATES[state.goal] || [];
+  if (!variants.length) return;
+  const variant = variants[state.variantIdx % variants.length];
+  const details = {
+    recipient: (document.getElementById('guide-recipient-' + convId) || {}).value || '',
+    yourRole:  (document.getElementById('guide-yourrole-'  + convId) || {}).value || '',
+    field:     (document.getElementById('guide-field-'     + convId) || {}).value || '',
+    company:   (document.getElementById('guide-company-'   + convId) || {}).value || '',
+    role:      (document.getElementById('guide-role-'      + convId) || {}).value || '',
+    context:   (document.getElementById('guide-context-'   + convId) || {}).value || '',
+  };
+  state.details = details;
+  const text = variant.template(details);
+  state.currentText = text;
+  const preview = document.getElementById('guide-preview-' + convId);
+  if (preview) { preview.value = text; _updateGuideCharCount(convId); }
+  const toneBadge = document.getElementById('guide-tone-' + convId);
+  if (toneBadge) toneBadge.textContent = variant.tone;
+  const variantLabel = document.getElementById('guide-variant-label-' + convId);
+  if (variantLabel) variantLabel.textContent = 'v' + (state.variantIdx + 1) + ' of ' + variants.length;
+}
+
+function cycleOutreachVariant(convId) {
+  const state = App.state.messageGuide[convId];
+  if (!state || !state.goal) return;
+  const variants = _OUTREACH_TEMPLATES[state.goal] || [];
+  state.variantIdx = (state.variantIdx + 1) % variants.length;
+  // Flash feedback on preview
+  const preview = document.getElementById('guide-preview-' + convId);
+  if (preview) {
+    preview.style.transition = 'opacity 0.12s';
+    preview.style.opacity = '0.3';
+    setTimeout(() => { preview.style.opacity = '1'; previewOutreachMessage(convId); }, 130);
+  } else {
+    previewOutreachMessage(convId);
+  }
+}
+
+function insertOutreachMessage(convId) {
+  const state = App.state.messageGuide[convId];
+  const preview = document.getElementById('guide-preview-' + convId);
+  const text = (preview && preview.value.trim()) || (state && state.currentText) || '';
+  if (!text) { createToast('Nothing to insert — write or generate a message first.', 'info'); return; }
+  const input = document.getElementById('msg-input-' + convId);
+  if (input) { input.value = text; autoResizeTextarea(input); input.focus(); }
+  const banner = document.getElementById('guide-banner-' + convId);
+  if (banner) banner.style.display = 'none';
+  closeMessageGuide(convId);
+  createToast('Message drafted! Review and send when ready.', 'success');
+}
+
+function _updateGuideCharCount(convId) {
+  const preview = document.getElementById('guide-preview-' + convId);
+  const counter = document.getElementById('guide-char-count-' + convId);
+  if (!preview || !counter) return;
+  const len = preview.value.length;
+  const ideal = 300;
+  counter.textContent = len + ' chars' + (len > ideal ? ' — consider trimming' : len < 80 ? ' — add more detail' : ' ✓ good length');
+  counter.style.color = len > ideal ? 'var(--orange)' : len < 80 && len > 0 ? 'var(--text-3)' : len === 0 ? 'var(--text-3)' : 'var(--green)';
+}
+
+function advanceGuideStep(convId) {
+  const state = App.state.messageGuide[convId];
+  if (!state) return;
+  if (state.step === 1) {
+    if (!state.goal) { createToast('Choose a goal to continue', 'info'); return; }
+    _showGuideStep(convId, 2);
+  } else if (state.step === 2) {
+    _showGuideStep(convId, 3);
+  }
+}
+
+function _renderMessageGuide(conv) {
+  const c = _convNormalize(conv);
+  const id = c.id;
+  // Restore previously selected goal (if returning to this conversation)
+  const savedState = App.state.messageGuide[id];
+  const savedGoal = savedState ? savedState.goal : null;
+  return `<div id="msg-guide-${id}" class="li-msg-guide" style="display:none;" role="complementary" aria-label="Outreach message guide">
+    <!-- Header -->
+    <div class="li-msg-guide__header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:15px;line-height:1;">✨</span>
+        <span class="li-msg-guide__title">Outreach Guide</span>
+        <div class="li-msg-guide__dots">
+          <div id="guide-dot-${id}-1" class="li-msg-guide__dot active"><span>1</span></div>
+          <div class="li-msg-guide__dot-line"></div>
+          <div id="guide-dot-${id}-2" class="li-msg-guide__dot"><span>2</span></div>
+          <div class="li-msg-guide__dot-line"></div>
+          <div id="guide-dot-${id}-3" class="li-msg-guide__dot"><span>3</span></div>
+        </div>
+      </div>
+      <button class="li-msg-guide__close" onclick="closeMessageGuide(${id})" title="Close guide" aria-label="Close guide">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Body: steps + tips sidebar -->
+    <div class="li-msg-guide__body">
+      <div class="li-msg-guide__steps">
+
+        <!-- Step 1: Choose goal -->
+        <div id="guide-step-${id}-1" class="li-msg-guide__step">
+          <div class="li-msg-guide__step-label">What's the purpose of your message?</div>
+          <div class="li-msg-guide__goals">
+            ${_OUTREACH_GOALS.map(g => `<div id="goal-tile-${id}-${g.key}" class="li-msg-guide__goal-tile${savedGoal === g.key ? ' selected' : ''}" onclick="selectMessageGoal(${id},'${g.key}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')selectMessageGoal(${id},'${g.key}')">
+              <span class="li-msg-guide__goal-icon">${g.icon}</span>
+              <span class="li-msg-guide__goal-label">${g.label}</span>
+              <span class="li-msg-guide__goal-desc">${g.desc}</span>
+            </div>`).join('')}
+          </div>
+        </div>
+
+        <!-- Step 2: Fill details -->
+        <div id="guide-step-${id}-2" class="li-msg-guide__step" style="display:none;">
+          <div class="li-msg-guide__step-label">Personalize your message</div>
+          <div class="li-msg-guide__fields">
+            <div class="li-msg-guide__field-row">
+              <label>Their first name</label>
+              <input id="guide-recipient-${id}" class="li-msg-guide__input" placeholder="e.g. Sarah" />
+            </div>
+            <div class="li-msg-guide__field-row">
+              <label>Your name / major</label>
+              <input id="guide-yourrole-${id}" class="li-msg-guide__input" placeholder="e.g. CS sophomore at NJIT" />
+            </div>
+            <div class="li-msg-guide__field-row">
+              <label>Their field / industry</label>
+              <input id="guide-field-${id}" class="li-msg-guide__input" placeholder="e.g. Software Engineering" />
+            </div>
+            <div class="li-msg-guide__field-row">
+              <label>Company <span style="font-weight:400;color:var(--text-3);">(optional)</span></label>
+              <input id="guide-company-${id}" class="li-msg-guide__input" placeholder="e.g. Google" />
+            </div>
+            <div class="li-msg-guide__field-row">
+              <label>Role / position <span style="font-weight:400;color:var(--text-3);">(optional)</span></label>
+              <input id="guide-role-${id}" class="li-msg-guide__input" placeholder="e.g. SWE Intern" />
+            </div>
+            <div class="li-msg-guide__field-row">
+              <label>Context <span style="font-weight:400;color:var(--text-3);">(optional)</span></label>
+              <input id="guide-context-${id}" class="li-msg-guide__input" placeholder="e.g. met at career fair…" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Preview & insert -->
+        <div id="guide-step-${id}-3" class="li-msg-guide__step" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+            <div class="li-msg-guide__step-label" style="margin:0;">Review &amp; edit your message</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span class="li-msg-guide__tone-badge" id="guide-tone-${id}">Warm</span>
+              <span id="guide-variant-label-${id}" style="font-size:10px;color:var(--text-3);">v1 of 2</span>
+              <button class="li-msg-guide__cycle-btn" onclick="cycleOutreachVariant(${id})" title="Try another version">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+                Try another
+              </button>
+            </div>
+          </div>
+          <textarea id="guide-preview-${id}" class="li-msg-guide__preview" placeholder="Your message will appear here…" rows="6" oninput="_updateGuideCharCount(${id})"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+            <span id="guide-char-count-${id}" style="font-size:11px;color:var(--text-3);">0 / 300</span>
+            <button class="li-msg-guide__insert-btn" onclick="insertOutreachMessage(${id})">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              Use this message
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /steps -->
+
+      <!-- Tips sidebar -->
+      <div class="li-msg-guide__tips-panel">
+        <div class="li-msg-guide__tips-heading">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--blue)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          Quick Tips
+        </div>
+        <div id="guide-tips-${id}" class="li-msg-guide__tips-list">
+          <div style="font-size:11px;color:var(--text-3);font-style:italic;line-height:1.5;">Pick a goal to see\ntailored tips</div>
+        </div>
+      </div>
+    </div><!-- /body -->
+
+    <!-- Footer nav -->
+    <div class="li-msg-guide__footer">
+      <button id="guide-back-${id}" class="li-msg-guide__nav-btn" style="display:none;" onclick="(()=>{const s=App.state.messageGuide[${id}];if(s&&s.step>1)_showGuideStep(${id},s.step-1);})()">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
+      </button>
+      <div style="flex:1;"></div>
+      <button id="guide-next-${id}" class="li-msg-guide__nav-btn primary" onclick="advanceGuideStep(${id})">
+        Next <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
     </div>
   </div>`;
 }
@@ -2581,6 +2979,7 @@ function renderNotifications() {
   const activeTab = App.state.activeTab['notif'] || 'all';
   App.state.unreadNotifications = 0;
   App._renderNav();
+  App._initStaticNav(); // update static nav badge
   const u = App.state.currentUser;
 
   // Normalize data.js format (actor/content/timestamp/isRead) to internal format
@@ -2744,6 +3143,9 @@ function markNotifRead(notifId) {
   const el = document.getElementById('notif-' + notifId);
   if (el) {
     el.classList.remove('unread');
+    el.style.borderLeft = '';
+    const timeEl = el.querySelector('.li-notif-item__time');
+    if (timeEl) { timeEl.style.color = 'var(--text-2)'; timeEl.style.fontWeight = '400'; }
     el.querySelector('[style*="background:var(--blue)"]')?.remove();
   }
 }
@@ -3079,8 +3481,8 @@ function renderSettings(tab) {
           </div>
           <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
             <input type="checkbox" ${App.state.darkMode ? 'checked' : ''} onchange="toggleDarkMode(this.checked)" style="opacity:0;width:0;height:0;position:absolute;"/>
-            <span style="position:absolute;inset:0;background:${App.state.darkMode ? 'var(--blue)' : '#ccc'};border-radius:24px;transition:0.3s;"></span>
-            <span style="position:absolute;left:${App.state.darkMode ? '20px' : '2px'};top:2px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;"></span>
+            <span style="position:absolute;inset:0;background:${App.state.darkMode ? 'var(--blue)' : 'var(--border-2)'};border-radius:24px;transition:0.3s;"></span>
+            <span style="position:absolute;left:${App.state.darkMode ? '20px' : '2px'};top:2px;width:20px;height:20px;background:var(--white);border-radius:50%;transition:0.3s;"></span>
           </label>
         </div>
         <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
@@ -3103,9 +3505,9 @@ function renderSettings(tab) {
         ].map(([label, desc, checked]) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);">
           <div><div style="font-size:14px;font-weight:600;">${label}</div><div style="font-size:13px;color:var(--text-2);">${desc}</div></div>
           <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
-            <input type="checkbox" ${checked ? 'checked' : ''} onchange="createToast('Setting updated','success')" style="opacity:0;width:0;height:0;position:absolute;"/>
-            <span style="position:absolute;inset:0;background:${checked ? 'var(--blue)' : '#ccc'};border-radius:24px;transition:0.3s;" onclick="this.style.background=this.previousElementSibling.checked?'#ccc':'var(--blue)'"></span>
-            <span style="position:absolute;left:${checked ? '20px' : '2px'};top:2px;width:20px;height:20px;background:white;border-radius:50%;transition:0.3s;"></span>
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleSwitch(this)" style="opacity:0;width:0;height:0;position:absolute;"/>
+            <span style="position:absolute;inset:0;background:${checked ? 'var(--blue)' : 'var(--border-2)'};border-radius:24px;transition:background 0.3s;"></span>
+            <span style="position:absolute;left:${checked ? '20px' : '2px'};top:2px;width:20px;height:20px;background:var(--white);border-radius:50%;transition:left 0.3s;"></span>
           </label>
         </div>`).join('')}
       </div>
@@ -3119,8 +3521,8 @@ function renderSettings(tab) {
           <button onclick="createToast('Merge accounts feature','info')" style="border:none;background:none;color:var(--blue);font-size:14px;cursor:pointer;font-weight:600;">Merge</button>
         </div>
         <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
-          <div><div style="font-size:14px;font-weight:600;color:#cc1016;">Close account</div><div style="font-size:13px;color:var(--text-2);">Permanently close your LinkedIn account</div></div>
-          <button onclick="createToast('Please contact support to close your account','warning')" style="border:none;background:none;color:#cc1016;font-size:14px;cursor:pointer;font-weight:600;">Close</button>
+          <div><div style="font-size:14px;font-weight:600;color:var(--red);">Close account</div><div style="font-size:13px;color:var(--text-2);">Permanently close your LinkedIn account</div></div>
+          <button onclick="createToast('Please contact support to close your account','warning')" style="border:none;background:none;color:var(--red);font-size:14px;cursor:pointer;font-weight:600;">Close</button>
         </div>
       </div>
     </div>`;
@@ -3145,7 +3547,7 @@ function renderSettings(tab) {
         <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
           <div>
             <div style="font-size:14px;font-weight:600;">Two-step verification</div>
-            <div style="font-size:13px;color:${s.twoFactor ? '#057642' : 'var(--text-2)'};">${s.twoFactor ? '✓ Enabled' : 'Not enabled — add an extra layer of security'}</div>
+            <div style="font-size:13px;color:${s.twoFactor ? 'var(--green)' : 'var(--text-2)'};">${s.twoFactor ? '✓ Enabled' : 'Not enabled — add an extra layer of security'}</div>
           </div>
           <button onclick="toggleSetting('twoFactor',this)" style="border:1px solid var(--blue);color:var(--blue);background:none;border-radius:16px;padding:5px 14px;font-size:13px;cursor:pointer;font-weight:600;">${s.twoFactor ? 'Disable' : 'Enable'}</button>
         </div>
@@ -3164,7 +3566,7 @@ function renderSettings(tab) {
             <span style="font-size:24px;">${icon}</span>
             <div><div style="font-size:14px;font-weight:600;">${device}</div><div style="font-size:13px;color:var(--text-2);">${detail}</div></div>
           </div>
-          <button onclick="createToast('Session ended','success')" style="border:none;background:none;color:#cc1016;font-size:13px;cursor:pointer;">End</button>
+          <button onclick="createToast('Session ended','success')" style="border:none;background:none;color:var(--red);font-size:13px;cursor:pointer;">End</button>
         </div>`).join('')}
       </div>
     </div>`;
@@ -3202,9 +3604,9 @@ function renderSettings(tab) {
           ${items.map(([label, desc, checked]) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);">
             <div><div style="font-size:14px;font-weight:600;">${label}</div><div style="font-size:13px;color:var(--text-2);">${desc}</div></div>
             <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex-shrink:0;">
-              <input type="checkbox" ${checked ? 'checked' : ''} onchange="createToast('Notification setting updated','success')" style="opacity:0;width:0;height:0;position:absolute;"/>
-              <span style="position:absolute;inset:0;background:${checked ? 'var(--blue)' : '#ccc'};border-radius:24px;transition:background 0.3s;"></span>
-              <span style="position:absolute;top:2px;left:${checked ? '20px' : '2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.3s;"></span>
+              <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleSwitch(this)" style="opacity:0;width:0;height:0;position:absolute;"/>
+              <span style="position:absolute;inset:0;background:${checked ? 'var(--blue)' : 'var(--border-2)'};border-radius:24px;transition:background 0.3s;"></span>
+              <span style="position:absolute;top:2px;left:${checked ? '20px' : '2px'};width:20px;height:20px;background:var(--white);border-radius:50%;transition:left 0.3s;"></span>
             </label>
           </div>`).join('')}
         </div>`).join('')}
@@ -3251,9 +3653,9 @@ function renderSettings(tab) {
       ${[['Ads based on your profile data','LinkedIn uses your experience, skills, and education to show relevant ads',true],['Ads based on your activity','LinkedIn uses your engagement and content interactions for ads',true],['Interest categories','LinkedIn infers interests from your activity',false],['Third-party data','Data from LinkedIn partners used for ad targeting',false]].map(([label,desc,checked])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
         <div><div style="font-size:14px;font-weight:600;">${label}</div><div style="font-size:13px;color:var(--text-2);">${desc}</div></div>
         <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex-shrink:0;">
-          <input type="checkbox" ${checked?'checked':''} onchange="createToast('Ad preference updated','success')" style="opacity:0;width:0;height:0;position:absolute;"/>
-          <span style="position:absolute;inset:0;background:${checked?'var(--blue)':'#ccc'};border-radius:24px;"></span>
-          <span style="position:absolute;top:2px;left:${checked?'20px':'2px'};width:20px;height:20px;background:white;border-radius:50%;"></span>
+          <input type="checkbox" ${checked?'checked':''} onchange="toggleSwitch(this)" style="opacity:0;width:0;height:0;position:absolute;"/>
+          <span style="position:absolute;inset:0;background:${checked?'var(--blue)':'var(--border-2)'};border-radius:24px;transition:background 0.3s;"></span>
+          <span style="position:absolute;top:2px;left:${checked?'20px':'2px'};width:20px;height:20px;background:var(--white);border-radius:50%;transition:left 0.3s;"></span>
         </label>
       </div>`).join('')}
     </div>`,
@@ -3261,9 +3663,9 @@ function renderSettings(tab) {
       ${[['InMail messages','Allow anyone to send you InMail messages',true],['Connection request messages','Show a message box when someone connects',true],['Recruiter messages','Allow recruiters to contact you',true],['Open Profile','Let Premium members contact you for free',false],['Read receipts','Show when you\'ve read messages',true]].map(([label,desc,checked])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
         <div><div style="font-size:14px;font-weight:600;">${label}</div><div style="font-size:13px;color:var(--text-2);">${desc}</div></div>
         <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex-shrink:0;">
-          <input type="checkbox" ${checked?'checked':''} onchange="createToast('Communication preference updated','success')" style="opacity:0;width:0;height:0;position:absolute;"/>
-          <span style="position:absolute;inset:0;background:${checked?'var(--blue)':'#ccc'};border-radius:24px;"></span>
-          <span style="position:absolute;top:2px;left:${checked?'20px':'2px'};width:20px;height:20px;background:white;border-radius:50%;"></span>
+          <input type="checkbox" ${checked?'checked':''} onchange="toggleSwitch(this)" style="opacity:0;width:0;height:0;position:absolute;"/>
+          <span style="position:absolute;inset:0;background:${checked?'var(--blue)':'var(--border-2)'};border-radius:24px;transition:background 0.3s;"></span>
+          <span style="position:absolute;top:2px;left:${checked?'20px':'2px'};width:20px;height:20px;background:var(--white);border-radius:50%;transition:left 0.3s;"></span>
         </label>
       </div>`).join('')}
     </div>`,
@@ -3285,7 +3687,7 @@ function renderSettings(tab) {
           <span>${t.icon}</span><span>${t.label}</span>
         </button>`).join('')}
         <div style="padding:12px 20px;border-top:1px solid var(--border);">
-          <a href="index.html" style="font-size:14px;color:#cc1016;text-decoration:none;font-weight:600;">Sign out</a>
+          <a href="index.html" style="font-size:14px;color:var(--red);text-decoration:none;font-weight:600;">Sign out</a>
         </div>
       </div>
     </aside>
@@ -3306,6 +3708,19 @@ function toggleSetting(key, btn) {
   App.state.settings[key] = !App.state.settings[key];
   btn.textContent = App.state.settings[key] ? 'Disable' : 'Enable';
   createToast('Setting updated!', 'success');
+}
+
+// Animate toggle switch knob on click — call from onchange on the hidden <input>
+function toggleSwitch(input, settingKey) {
+  const track = input.nextElementSibling;
+  const knob  = track ? track.nextElementSibling : null;
+  if (track) track.style.background = input.checked ? 'var(--blue)' : 'var(--border-2)';
+  if (knob)  knob.style.left        = input.checked ? '20px' : '2px';
+  if (settingKey) {
+    if (!App.state.settings) App.state.settings = {};
+    App.state.settings[settingKey] = input.checked;
+  }
+  createToast('Setting updated', 'success');
 }
 
 function toggleDarkMode(enabled) {
@@ -3471,19 +3886,19 @@ function renderEvents() {
     return `<div class="li-card" style="padding:0;overflow:hidden;cursor:pointer;" onclick="createToast('Opening event: ${escapeHtml(event.title)}','info')">
       <div style="height:100px;background:${event.coverGradient||'linear-gradient(135deg,#0a66c2,#004182)'};position:relative;">
         <div style="position:absolute;top:10px;left:10px;background:var(--white);border-radius:6px;padding:6px 10px;text-align:center;min-width:44px;">
-          <div style="font-size:10px;font-weight:700;color:#cc1016;">${month}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--blue);">${month}</div>
           <div style="font-size:20px;font-weight:700;color:var(--text);">${day}</div>
         </div>
         ${event.isVirtual ? `<div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.5);color:white;font-size:11px;padding:3px 8px;border-radius:10px;">🌐 Online</div>` : `<div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.5);color:white;font-size:11px;padding:3px 8px;border-radius:10px;">📍 In-Person</div>`}
       </div>
       <div style="padding:14px;">
-        <div style="font-size:13px;color:${daysUntil <= 3 ? '#cc1016' : 'var(--blue)'};font-weight:600;margin-bottom:4px;">${daysLabel}</div>
+        <div style="font-size:13px;color:${daysUntil <= 3 ? 'var(--orange)' : 'var(--blue)'};font-weight:600;margin-bottom:4px;">${daysLabel}</div>
         <div style="font-size:15px;font-weight:700;margin-bottom:4px;line-height:1.3;">${escapeHtml(event.title)}</div>
         <div style="font-size:13px;color:var(--text-2);margin-bottom:4px;">${escapeHtml(event.time||'')}</div>
         <div style="font-size:13px;color:var(--text-2);margin-bottom:8px;">📍 ${escapeHtml(event.location||'')}</div>
         <div style="font-size:12px;color:var(--text-2);margin-bottom:12px;">${formatNumber(event.attendees||0)} attending · ${formatNumber(event.interested||0)} interested</div>
         <div style="display:flex;gap:8px;">
-          <button onclick="event.stopPropagation();toggleEventAttend(${event.id},this)" style="flex:1;background:${event.isAttending?'#057642':'var(--blue)'};color:white;border:none;border-radius:16px;padding:7px;font-size:13px;font-weight:600;cursor:pointer;">${event.isAttending ? '✓ Attending' : 'Attend'}</button>
+          <button onclick="event.stopPropagation();toggleEventAttend(${event.id},this)" style="flex:1;background:${event.isAttending?'var(--green)':'var(--blue)'};color:white;border:none;border-radius:16px;padding:7px;font-size:13px;font-weight:600;cursor:pointer;">${event.isAttending ? '✓ Attending' : 'Attend'}</button>
           <button onclick="event.stopPropagation();toggleEventInterest(${event.id},this)" style="border:1px solid ${event.isInterested?'var(--blue)':'var(--border-2)'};color:${event.isInterested?'var(--blue)':'var(--text-2)'};background:none;border-radius:16px;padding:7px 12px;font-size:13px;cursor:pointer;">${event.isInterested ? '★' : '☆'}</button>
         </div>
       </div>
@@ -3537,7 +3952,7 @@ function toggleEventAttend(eventId, btn) {
   if (event) {
     event.isAttending = !event.isAttending;
     btn.textContent = event.isAttending ? '✓ Attending' : 'Attend';
-    btn.style.background = event.isAttending ? '#057642' : 'var(--blue)';
+    btn.style.background = event.isAttending ? 'var(--green)' : 'var(--blue)';
     createToast(event.isAttending ? 'You are now attending!' : 'Removed from attending', event.isAttending ? 'success' : 'info');
   }
 }
@@ -3567,7 +3982,7 @@ function renderGroups() {
     return `<div class="li-card" style="padding:0;overflow:hidden;cursor:pointer;transition:box-shadow 0.2s;" onclick="window.location.hash='group/${group.id}'" onmouseenter="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseleave="this.style.boxShadow=''">
       <div style="height:80px;background:${group.coverGradient||'linear-gradient(135deg,#0a66c2,#004182)'};position:relative;">
         <div style="position:absolute;bottom:-24px;left:14px;width:48px;height:48px;border-radius:8px;border:2px solid var(--white);overflow:hidden;background:var(--white);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 1px 4px rgba(0,0,0,0.15);">${group.logo||'👥'}</div>
-        ${group.unread > 0 ? `<div style="position:absolute;top:8px;right:8px;background:#cc1016;color:white;border-radius:10px;font-size:11px;font-weight:700;padding:2px 7px;">${group.unread} new</div>` : ''}
+        ${group.unread > 0 ? `<div style="position:absolute;top:8px;right:8px;background:var(--red);color:white;border-radius:10px;font-size:11px;font-weight:700;padding:2px 7px;">${group.unread} new</div>` : ''}
       </div>
       <div style="padding:32px 14px 14px;">
         <div style="font-size:15px;font-weight:700;margin-bottom:3px;line-height:1.3;">${escapeHtml(group.name)}</div>
@@ -3852,7 +4267,7 @@ function renderPremium() {
     ${u.isPremium ? `<div style="background:var(--premium-banner-bg,#fef3c7);border:1px solid var(--premium-banner-border,#f5a623);border-radius:8px;padding:14px 20px;margin-bottom:24px;display:flex;gap:12px;align-items:center;">
       <span style="font-size:24px;">⭐</span>
       <div><div style="font-weight:700;font-size:15px;color:var(--text);">You have LinkedIn Premium Business</div><div style="font-size:13px;color:var(--text-2);">Your subscription renews on March 15, 2026</div></div>
-      <button onclick="createToast('Manage subscription','info')" style="margin-left:auto;border:1px solid var(--premium-banner-border,#f5a623);color:#b45309;background:none;border-radius:16px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;">Manage</button>
+      <button onclick="createToast('Manage subscription','info')" style="margin-left:auto;border:1px solid var(--premium-banner-border,#f5a623);color:var(--gold-dark);background:none;border-radius:16px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;">Manage</button>
     </div>` : `<div style="background:var(--success-banner-bg,#d1fae5);border:1px solid var(--success-banner-border,#34d399);border-radius:8px;padding:14px 20px;margin-bottom:24px;display:flex;gap:12px;align-items:center;">
       <span style="font-size:24px;">🎁</span>
       <div><div style="font-weight:700;font-size:15px;color:var(--text);">Try 1 month free, then cancel anytime</div><div style="font-size:13px;color:var(--text-2);">No commitment. Full access to all Premium features.</div></div>
@@ -3906,7 +4321,7 @@ function renderPremium() {
               ['CRM integration', '—', '—', '✓', '—'],
               ['Candidate tools', '—', '—', '—', '✓'],
             ].map((row, i) => `<tr style="border-bottom:1px solid var(--border);background:${i%2===0?'var(--white)':'var(--bg)'};">
-              ${row.map((cell, j) => `<td style="padding:12px 16px;${j===0?'font-weight:600;color:var(--text);':'text-align:center;color:'+(cell==='✓'?'#057642':cell==='—'?'var(--text-3)':'var(--text)')+';'}">${cell}</td>`).join('')}
+              ${row.map((cell, j) => `<td style="padding:12px 16px;${j===0?'font-weight:600;color:var(--text);':'text-align:center;color:'+(cell==='✓'?'var(--green)':cell==='—'?'var(--text-3)':'var(--text)')+';'}">${cell}</td>`).join('')}
             </tr>`).join('')}
           </tbody>
         </table>

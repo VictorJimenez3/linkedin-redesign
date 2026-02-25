@@ -2538,6 +2538,9 @@ function renderChatPanel(conv) {
     <!-- Outreach Guide panel (slides up above input) -->
     ${_renderMessageGuide(conv)}
 
+    <!-- Profile Readiness panel (dependent user story) -->
+    ${_renderProfileReadiness(conv)}
+
     <!-- Input area -->
     <div style="padding:10px 12px;border-top:1px solid var(--border);background:var(--white);flex-shrink:0;">
       <div style="display:flex;gap:6px;align-items:flex-end;border:1.5px solid var(--border-2);border-radius:8px;padding:6px 10px;background:var(--white);" onfocusin="this.style.borderColor='var(--blue)'" onfocusout="this.style.borderColor='var(--border-2)'">
@@ -2548,6 +2551,11 @@ function renderChatPanel(conv) {
           <button class="li-msg-guide__trigger" onclick="openMessageGuide(${c.id})" title="Outreach Guide — get help drafting your first message">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 6v4m0 4h.01"/></svg>
             ✨ Guide
+          </button>
+
+          <button class="li-msg-score__trigger" onclick="openProfileReadiness(${c.id})" title="Profile Readiness — see what to improve before outreach">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16V10"/><path d="M12 16V7"/><path d="M16 16v-4"/></svg>
+            📊 Score
           </button>
         </div>
         <textarea id="msg-input-${c.id}" placeholder="Write a message…" style="flex:1;border:none;outline:none;font-size:14px;resize:none;max-height:100px;font-family:inherit;background:transparent;line-height:1.4;" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage(${c.id})}" oninput="autoResizeTextarea(this)"></textarea>
@@ -2588,6 +2596,204 @@ function closeMessageGuide(convId) {
   if (!panel) return;
   panel.style.animation = 'slideDownGuide 0.2s ease forwards';
   setTimeout(() => { panel.style.display = 'none'; }, 200);
+}
+
+// ============================================================
+// PROFILE READINESS (DEPENDENT USER STORY)
+// - Lives inside Messaging, like the Outreach Guide.
+// - Uses mocked scoring logic ("mock backend") to compute a readiness score.
+// ============================================================
+
+function openProfileReadiness(convId) {
+  const panel = document.getElementById('msg-score-' + convId);
+  if (!panel) return;
+
+  // Toggle behavior
+  if (panel.style.display !== 'none') { closeProfileReadiness(convId); return; }
+
+  // Ensure we have a baseline score in state
+  if (!App.state.profileReadiness) App.state.profileReadiness = {};
+  if (!App.state.profileReadiness[convId]) {
+    App.state.profileReadiness[convId] = mockBackendGetProfileReadiness(App.state.currentUser);
+  }
+
+  // Close guide if open to avoid overlapping panels
+  closeMessageGuide(convId);
+
+  panel.style.display = 'flex';
+  panel.style.animation = 'slideUpGuide 0.25s ease';
+  _renderProfileReadinessUI(convId);
+
+  // Update trigger button to show "active" state
+  const trigger = panel.closest('[style*="flex-direction:column"]')?.querySelector('.li-msg-score__trigger');
+  if (trigger) trigger.style.background = 'rgba(10,102,194,0.12)';
+
+  const handler = (e) => {
+    if (e.key === 'Escape') {
+      closeProfileReadiness(convId);
+      document.removeEventListener('keydown', handler);
+    }
+  };
+  document.addEventListener('keydown', handler);
+}
+
+function closeProfileReadiness(convId) {
+  const panel = document.getElementById('msg-score-' + convId);
+  if (!panel) return;
+  panel.style.animation = 'slideDownGuide 0.2s ease forwards';
+  setTimeout(() => { panel.style.display = 'none'; }, 200);
+}
+
+function refreshProfileReadiness(convId) {
+  if (!App.state.profileReadiness) App.state.profileReadiness = {};
+  // Mock "recompute" — deterministic-ish but can change slightly
+  App.state.profileReadiness[convId] = mockBackendGetProfileReadiness(App.state.currentUser, { jitter: true });
+  _renderProfileReadinessUI(convId);
+  createToast('Score refreshed', 'success');
+}
+
+function _renderProfileReadinessUI(convId) {
+  const s = App.state.profileReadiness?.[convId] || mockBackendGetProfileReadiness(App.state.currentUser);
+  const root = document.getElementById('msg-score-body-' + convId);
+  if (!root) return;
+
+  const status = s.score >= 80 ? 'good' : s.score >= 70 ? 'warn' : 'bad';
+  const statusLabel = s.score >= 80 ? 'Ready' : s.score >= 70 ? 'Almost there' : 'Needs improvement';
+
+  // SVG ring math (circumference is 2πr; r=44 => ~276.46)
+  const r = 44;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - (s.score / 100));
+
+  root.innerHTML = `
+    <div class="li-msg-score__grid">
+      <div class="li-msg-score__left">
+        <div class="li-msg-score__summary ${status}">
+          <div class="li-msg-score__ring">
+            <svg width="108" height="108" viewBox="0 0 108 108" aria-hidden="true">
+              <circle cx="54" cy="54" r="${r}" stroke="var(--border)" stroke-width="8" fill="none" />
+              <circle cx="54" cy="54" r="${r}" stroke="${status === 'good' ? 'var(--green)' : status === 'warn' ? 'var(--gold-dark)' : 'var(--red)'}" stroke-width="8" fill="none"
+                stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" stroke-linecap="round"
+                transform="rotate(-90 54 54)" />
+            </svg>
+            <div class="li-msg-score__ring-text">
+              <div class="li-msg-score__ring-num">${s.score}</div>
+              <div class="li-msg-score__ring-den">/ 100</div>
+            </div>
+          </div>
+
+          <div class="li-msg-score__status">
+            <span class="li-msg-score__badge ${status}">${statusLabel}</span>
+          </div>
+
+          <div class="li-msg-score__sub">Boost your reply rate by tightening your profile before cold outreach.</div>
+        </div>
+
+        <div class="li-msg-score__breakdown">
+          ${s.sections.map(sec => {
+            const c = sec.score >= 80 ? 'good' : sec.score >= 70 ? 'warn' : 'bad';
+            return `
+              <div class="li-msg-score__bar">
+                <div class="li-msg-score__bar-label">${escapeHtml(sec.label)}</div>
+                <div class="li-msg-score__bar-track"><div class="li-msg-score__bar-fill ${c}" style="width:${sec.score}%;"></div></div>
+                <div class="li-msg-score__bar-pct ${c}">${sec.score}%</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="li-msg-score__right">
+        <div class="li-msg-score__card">
+          <div class="li-msg-score__card-title">Quick fixes</div>
+          <div class="li-msg-score__fixes">
+            ${s.fixes.map(f => {
+              const c = f.status;
+              return `
+                <div class="li-msg-score__fix">
+                  <div class="li-msg-score__fix-left">
+                    <span class="li-msg-score__dot ${c}"></span>
+                    <span class="li-msg-score__fix-label">${escapeHtml(f.label)}</span>
+                  </div>
+                  ${c === 'done' ? `<span class="li-msg-score__done">Done</span>` : `<button class="li-msg-score__fix-btn" onclick="gotoProfileFix('${f.key}')">Fix</button>`}
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="li-msg-score__actions">
+            <button class="li-msg-score__btn" onclick="refreshProfileReadiness(${convId})">Refresh score</button>
+            <button class="li-msg-score__btn primary" onclick="gotoProfileFix('all')">Fix in profile</button>
+          </div>
+
+          <div class="li-msg-score__note">You can still message now — but improving these sections usually increases response rates.</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function gotoProfileFix(key) {
+  // Keep this lightweight to avoid changing existing profile logic.
+  // We just route to the profile page and show a toast describing what to improve.
+  App.navigate('profile');
+  const labelMap = {
+    headline: 'Update your headline to be more specific (role + school + skill).',
+    about: 'Expand your About section with goals + skills + what drives you.',
+    skills: 'Add 5+ relevant skills so recruiters can find you.',
+    exp: 'Add metrics/impact to your experience bullets.',
+    photo: 'Upload a clear photo with a simple background.',
+    all: 'Scroll your profile and apply the quick fixes.'
+  };
+  createToast(labelMap[key] || 'Tip: improve your profile sections for better outreach results.', 'info');
+}
+
+// "Mock backend" for readiness score
+function mockBackendGetProfileReadiness(user, opts = {}) {
+  const jitter = opts.jitter ? (Math.random() * 4 - 2) : 0;
+  const clamp = (n) => Math.max(0, Math.min(100, Math.round(n)));
+
+  const u = user || {};
+  const headlineLen = (u.headline || '').trim().length;
+  const aboutLen = (u.about || '').trim().length;
+  const skillCount = Array.isArray(u.skills) ? u.skills.length : (u.skills ? 1 : 0);
+
+  // Skills scoring rubric (so "done" can still be <100 depending on how many skills)
+  const skillsScoreBase =
+    skillCount >= 13 ? 100 :
+    skillCount >= 11 ? 90  :
+    skillCount >= 8  ? 75  :
+    skillCount >= 5  ? 55  :
+    skillCount >= 3  ? 45  :
+    skillCount >= 1  ? 25  : 10;
+
+  const sections = [
+    { key: 'photo',    label: 'Photo',      score: 67 },
+    { key: 'headline', label: 'Headline',   score: 42 },
+    { key: 'about',    label: 'About',      score: 30 },
+    { key: 'exp',      label: 'Experience', score: 60 },
+    { key: 'edu',      label: 'Education',  score: 90 },
+    { key: 'skills',   label: 'Skills',     score: skillsScoreBase },
+  ].map(s => ({ ...s, score: clamp(s.score + jitter) }));
+
+  const score = clamp(sections.reduce((a, b) => a + b.score, 0) / sections.length);
+
+  const fixes = [
+    { key: 'photo',    label: 'Profile photo',             status: score >= 60 ? 'done' : 'warn' },
+    { key: 'headline', label: 'Improve headline',          status: 'bad' },
+    { key: 'about',    label: 'Expand About section',      status: 'bad' },
+    { key: 'skills',   label: 'Add 5+ skills',             status: 'warn' },
+    { key: 'exp',      label: 'Add metrics in experience', status: 'warn' },
+    { key: 'edu',      label: 'Education complete',        status: 'done' },
+  ];
+
+  if (headlineLen >= 35) fixes.find(f => f.key === 'headline').status = 'warn';
+  if (headlineLen >= 55) fixes.find(f => f.key === 'headline').status = 'done';
+  if (aboutLen >= 120) fixes.find(f => f.key === 'about').status = 'warn';
+  if (aboutLen >= 170) fixes.find(f => f.key === 'about').status = 'done';
+  if (skillCount >= 8)  fixes.find(f => f.key === 'skills').status = 'done';
+
+  return { score, sections, fixes };
 }
 
 function _showGuideStep(convId, step) {
@@ -2833,6 +3039,33 @@ function _renderMessageGuide(conv) {
       <button id="guide-next-${id}" class="li-msg-guide__nav-btn primary" onclick="advanceGuideStep(${id})">
         Next <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
+    </div>
+  </div>`;
+}
+
+function _renderProfileReadiness(conv) {
+  const c = _convNormalize(conv);
+  const id = c.id;
+  return `<div id="msg-score-${id}" class="li-msg-score" style="display:none;" role="complementary" aria-label="Profile readiness score">
+    <div class="li-msg-score__header">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span style="font-size:15px;line-height:1;">📊</span>
+        <span class="li-msg-score__title">Profile Readiness</span>
+        <span class="li-msg-score__subtitle">Improve your profile before outreach</span>
+      </div>
+      <button class="li-msg-score__close" onclick="closeProfileReadiness(${id})" title="Close" aria-label="Close profile readiness">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="li-msg-score__body" id="msg-score-body-${id}">
+      <!-- filled by _renderProfileReadinessUI -->
+    </div>
+
+    <div class="li-msg-score__footer">
+      <button class="li-msg-score__footer-btn" onclick="gotoProfileFix('all')">Go to profile</button>
+      <div style="flex:1;"></div>
+      <button class="li-msg-score__footer-btn primary" onclick="closeProfileReadiness(${id})">Continue messaging</button>
     </div>
   </div>`;
 }

@@ -219,8 +219,8 @@ function ProfilePage({ userId }) {
                       )}
                       {exp.skills && exp.skills.length > 0 && (
                         <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {exp.skills.map(s => (
-                            <span key={s} style={{ fontSize: 12, background: 'var(--bg-2)', padding: '2px 8px', borderRadius: 10 }}>{s}</span>
+                          {(typeof exp.skills === 'string' ? exp.skills.split(',') : exp.skills).map((s, i) => (
+                            <span key={i} style={{ fontSize: 12, background: 'var(--bg-2)', padding: '2px 8px', borderRadius: 10 }}>{typeof s === 'object' ? s.name : s.trim()}</span>
                           ))}
                         </div>
                       )}
@@ -274,14 +274,17 @@ function ProfilePage({ userId }) {
                 {isOwnProfile && <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => showToast('Add skill — coming soon')}>+ Add</button>}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {(expandedSections.has('skills') ? user.skills : user.skills.slice(0, 10)).map(skill => (
-                  <span key={skill} style={{
-                    fontSize: 13, padding: '6px 14px', borderRadius: 16,
-                    border: '1px solid var(--border)', background: 'var(--bg-2)', color: 'var(--text)',
-                  }}>
-                    {skill}
-                  </span>
-                ))}
+                {(expandedSections.has('skills') ? user.skills : user.skills.slice(0, 10)).map((skill, i) => {
+                  const label = typeof skill === 'object' ? skill.name : skill;
+                  return (
+                    <span key={label + i} style={{
+                      fontSize: 13, padding: '6px 14px', borderRadius: 16,
+                      border: '1px solid var(--border)', background: 'var(--bg-2)', color: 'var(--text)',
+                    }}>
+                      {label}
+                    </span>
+                  );
+                })}
               </div>
               {user.skills.length > 10 && (
                 <button className="li-btn li-btn--ghost li-btn--sm" style={{ marginTop: 12 }} onClick={() => toggleSection('skills')}>
@@ -308,8 +311,8 @@ function ProfilePage({ userId }) {
                     </div>
                     <div>
                       <div style={{ fontSize: 15, fontWeight: 700 }}>{cert.name}</div>
-                      <div style={{ fontSize: 14, color: 'var(--text-2)' }}>{cert.issuer}</div>
-                      {cert.date && <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Issued {cert.date}</div>}
+                      <div style={{ fontSize: 14, color: 'var(--text-2)' }}>{cert.org || cert.issuer}</div>
+                      {(cert.issueDate || cert.date) && <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Issued {cert.issueDate || cert.date}</div>}
                     </div>
                   </div>
                 ))}

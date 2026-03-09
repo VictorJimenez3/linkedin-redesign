@@ -95,23 +95,6 @@ function FeedPage() {
                 </div>
               </div>
 
-              <div className="li-profile-card__links">
-                {[
-                  { label: 'Groups', action: () => navigate('groups') },
-                  { label: 'Events', action: () => navigate('events') },
-                  { label: 'Learning', action: () => navigate('learning') },
-                ].map(item => (
-                  <div key={item.label} className="li-profile-card__link" onClick={item.action}>
-                    {item.label}
-                  </div>
-                ))}
-              </div>
-              <div style={{ padding: '8px 16px 12px', borderTop: '1px solid var(--border)' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                  onClick={() => navigate('network')}>
-                  Discover more <span>›</span>
-                </span>
-              </div>
             </>
           )}
         </div>

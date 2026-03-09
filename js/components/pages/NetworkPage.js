@@ -16,34 +16,6 @@ function NetworkPage() {
   return (
     <div className="li-page-inner">
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-        {/* Left sidebar */}
-        <div style={{ width: 220, flexShrink: 0 }}>
-          <div className="li-card" style={{ padding: '12px 0', marginBottom: 16 }}>
-            <div style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, color: 'var(--text-2)' }}>Manage my network</div>
-            {[
-              ['Connections', connections.size],
-              ['Following & Followers', 48],
-              ['Groups', 2],
-              ['Events', 0],
-              ['Pages', 3],
-              ['Newsletters', 1],
-              ['Hashtags', 6],
-            ].map(([label, count]) => (
-              <div key={label} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 16px', cursor: 'pointer', fontSize: 14,
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
-                onMouseLeave={e => e.currentTarget.style.background = ''}
-                onClick={() => showToast(`${label} — coming soon`)}
-              >
-                <span>{label}</span>
-                {count > 0 && <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>{count}</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Main content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Invitations */}

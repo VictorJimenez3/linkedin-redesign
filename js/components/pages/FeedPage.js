@@ -84,16 +84,6 @@ function FeedPage() {
                 <div className="li-profile-card__headline">{(u.headline || '').split('|')[0].trim()}</div>
                 {u.location && <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>{u.location}</div>}
               </div>
-              <div className="li-profile-card__stats">
-                <div className="li-profile-card__stat" onClick={() => navigate('profile')}>
-                  <span>Profile viewers</span>
-                  <span className="li-profile-card__stat-value">{formatNumber(u.profileViews || 0)}</span>
-                </div>
-                <div className="li-profile-card__stat" onClick={() => navigate('profile')}>
-                  <span>Post impressions</span>
-                  <span className="li-profile-card__stat-value">{formatNumber(u.postImpressions || 0)}</span>
-                </div>
-              </div>
 
             </>
           )}
@@ -152,38 +142,6 @@ function FeedPage() {
 
       {/* ── RIGHT SIDEBAR ── */}
       <aside className="li-sidebar-right">
-        {/* Nexus Today */}
-        {allNews.length > 0 && (
-          <div className="li-card" style={{ padding: '12px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 8px', fontWeight: 700, fontSize: 15 }}>
-              Nexus Today
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ cursor: 'pointer', color: 'var(--text-2)' }}
-                onClick={() => showToast('News details — coming soon')}>
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-            </div>
-            <div style={{ padding: '0 16px 6px', fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>Top stories</div>
-            {allNews.slice(0, 5).map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 16px', cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
-                onMouseLeave={e => e.currentTarget.style.background = ''}
-                onClick={() => showToast(`${item.title || item.headline} — opening...`)}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--text)', flexShrink: 0, marginTop: 6 }} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{item.title || item.headline}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                    {[item.timeAgo, item.readers ? item.readers + ' readers' : null].filter(Boolean).join(' · ')}
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--text-2)', cursor: 'pointer' }}
-              onClick={() => showToast('Loading more news...')}>
-              Show more
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
-            </div>
-          </div>
-        )}
 
         {/* People you may know */}
         {suggUsers.length > 0 && (

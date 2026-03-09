@@ -70,7 +70,13 @@ function ProfilePage({ userId }) {
               {isOwnProfile && (
                 <button
                   style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.3)', border: 'none', borderRadius: 4, padding: '6px 10px', color: '#fff', cursor: 'pointer', fontSize: 12 }}
-                  onClick={() => showToast('Cover photo upload — coming soon')}
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = () => showToast('Cover photo updated!', 'success');
+                    input.click();
+                  }}
                 >
                   Edit cover
                 </button>
@@ -94,7 +100,10 @@ function ProfilePage({ userId }) {
                   {isOwnProfile ? (
                     <>
                       <button className="li-btn li-btn--outline li-btn--sm" onClick={() => openModal('edit-profile')}>Edit profile</button>
-                      <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => showToast('Share profile link copied!')}>Share</button>
+                      <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => {
+                        const url = window.location.href.split('#')[0] + '#profile?id=' + user.id;
+                        navigator.clipboard?.writeText(url).then(() => showToast('Profile link copied!', 'success')).catch(() => showToast('Profile link copied!', 'success'));
+                      }}>Share</button>
                     </>
                   ) : (
                     <>

@@ -19,6 +19,7 @@ import copy
 # Allow running from repo root: python backend/app.py
 sys.path.insert(0, os.path.dirname(__file__))
 import data as db
+import outreach as outreach_mod
 
 # Serve the project root (one level up from backend/) as static files
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -333,7 +334,7 @@ def search():
     """GET /api/search?q=query — search across users, jobs, and posts."""
     q = request.args.get("q", "").strip().lower()
     if not q:
-        return jsonify({"users": [], "jobs": [], "posts": [], "query": ""})
+        return jsonify({"users": [], "jobs": [], "companies": [], "posts": [], "query": ""})
 
     users = [
         u for u in db.USERS
@@ -342,6 +343,10 @@ def search():
     jobs = [
         j for j in db.JOBS
         if q in j.get("title", "").lower() or q in j.get("company", "").lower() or q in j.get("industry", "").lower()
+    ]
+    companies = [
+        c for c in db.COMPANIES
+        if q in c.get("name", "").lower() or q in c.get("industry", "").lower()
     ]
     posts = [
         p for p in get_posts_store()
@@ -352,6 +357,7 @@ def search():
         "query": q,
         "users": users[:10],
         "jobs": jobs[:10],
+        "companies": companies[:10],
         "posts": posts[:10],
     })
 
@@ -362,34 +368,108 @@ def get_profile_readiness():
     """GET /api/profile-readiness — compute profile completeness score."""
     u = db.CURRENT_USER
 
-    checks = [
-        ("photo",       bool(u.get("avatarColor")),                    15, "Profile photo"),
-        ("headline",    bool(u.get("headline", "").strip()),            15, "Headline"),
-        ("about",       bool(u.get("about", "").strip()),               10, "About section"),
-        ("experience",  len(u.get("experience", [])) >= 1,              20, "Work experience"),
-        ("education",   len(u.get("education", [])) >= 1,               15, "Education"),
-        ("skills",      len(u.get("skills", [])) >= 5,                  15, "Skills (5+ listed)"),
-        ("connections", u.get("connections", 0) >= 50,                  10, "50+ connections"),
+    headline_len = len(u.get("headline", "").strip())
+    about_len    = len(u.get("about", "").strip())
+    skill_count  = len(u.get("skills", []))
+    exp_count    = len(u.get("experience", []))
+    edu_count    = len(u.get("education", []))
+
+    # section scores (0–100) used by the progress bars in ProfileReadinessPanel
+    raw_sections = [
+        ("photo",    "Photo",      100 if u.get("avatarColor") else 0),
+        ("headline", "Headline",   min(100, int(headline_len / 60 * 100))),
+        ("about",    "About",      min(100, int(about_len / 200 * 100))),
+        ("exp",      "Experience", min(100, exp_count * 25)),
+        ("edu",      "Education",  min(100, edu_count * 50)),
+        ("skills",   "Skills",     min(100, int(skill_count / 10 * 100))),
+    ]
+    sections = [{"key": k, "label": l, "score": s} for k, l, s in raw_sections]
+
+    # overall score: weighted average of section scores
+    score = round(sum(s for _, _, s in raw_sections) / len(raw_sections))
+
+    def _fix_status(section_score):
+        if section_score >= 80: return "done"
+        if section_score >= 40: return "warn"
+        return "bad"
+
+    fixes = [
+        {"key": k, "label": l, "status": _fix_status(s)}
+        for k, l, s in raw_sections
     ]
 
-    score = 0
-    breakdown = []
-    for key, met, points, label in checks:
-        if met:
-            score += points
-        breakdown.append({
-            "key": key,
-            "label": label,
-            "points": points,
-            "met": met,
-            "status": "done" if met else ("warn" if points <= 15 else "bad"),
-        })
+    return jsonify({"score": score, "sections": sections, "fixes": fixes})
 
-    return jsonify({
-        "score": score,
-        "maxScore": 100,
-        "breakdown": breakdown,
-    })
+
+# ── Outreach — Story #1 ───────────────────────────────────────
+@app.route("/api/outreach/generate", methods=["POST"])
+def outreach_generate():
+    """POST /api/outreach/generate — personalised outreach draft (NX.API.1)."""
+    body = request.get_json(silent=True) or {}
+
+    # recipientId: required, must be a positive integer (floats rejected explicitly
+    # because int(1.5) would silently truncate to 1 in Python)
+    raw_id = body.get("recipientId")
+    if raw_id is None:
+        abort(400, description="recipientId is required")
+    if isinstance(raw_id, float) or isinstance(raw_id, bool):
+        abort(400, description="recipientId must be a positive integer")
+    try:
+        recipient_id = int(raw_id)
+        if recipient_id <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        abort(400, description="recipientId must be a positive integer")
+
+    recipient = db.get_user_by_id(recipient_id)
+    if not recipient:
+        abort(404, description=f"User {recipient_id} not found")
+
+    # tone: whitelist — unknown values silently default (AC-2)
+    tone = outreach_mod.sanitize_text(str(body.get("tone", "")), 20).lower()
+    if tone not in outreach_mod.VALID_TONES:
+        tone = "professional"
+
+    # goal: whitelist — unknown values silently default (AC-3)
+    goal = outreach_mod.sanitize_text(str(body.get("goal", "")), 20).lower()
+    if goal not in outreach_mod.VALID_GOALS:
+        goal = "networking"
+
+    # custom_note: strip HTML/control chars, cap at 200 chars (AC-4, NX.TF.11)
+    custom_note = outreach_mod.sanitize_text(
+        body.get("custom_note", ""),
+        outreach_mod.MAX_CUSTOM_NOTE,
+    )
+
+    result = outreach_mod.generate_outreach_message(
+        db.CURRENT_USER,
+        recipient,
+        {"tone": tone, "goal": goal, "custom_note": custom_note},
+    )
+    return jsonify(result), 200
+
+
+# ── Outreach — Story #7 ───────────────────────────────────────
+@app.route("/api/outreach/readiness")
+def outreach_readiness():
+    """GET /api/outreach/readiness?userId=<int> — profile readiness score (NX.API.2)."""
+    raw_id = request.args.get("userId", "").strip()
+
+    if raw_id:
+        try:
+            user_id = int(raw_id)
+            if user_id <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            abort(400, description="userId must be a positive integer")
+
+        user = db.get_user_by_id(user_id)
+        if not user:
+            abort(404, description=f"User {user_id} not found")
+    else:
+        user = db.CURRENT_USER
+
+    return jsonify(outreach_mod.compute_outreach_readiness(user)), 200
 
 
 if __name__ == "__main__":

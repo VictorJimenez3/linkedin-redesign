@@ -56,7 +56,7 @@ function GroupsPage() {
 
       {shown.length === 0 ? (
         <div className="li-card" style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>Groups</div>
           <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 16 }}>
             {tab === 'my-groups' ? "You haven't joined any groups yet." : 'No groups to discover right now.'}
           </p>
@@ -78,7 +78,7 @@ function GroupsPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 22, color: '#fff',
                 }}>
-                  {group.logo || group.emoji || '👥'}
+                  {group.logo || group.emoji || ''}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>{group.name}</h3>

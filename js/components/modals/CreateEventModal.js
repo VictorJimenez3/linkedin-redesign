@@ -39,8 +39,8 @@ function CreateEventModal() {
           {/* Online / In-person toggle */}
           <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
             {[
-              { id: 'online',    label: '🌐 Online' },
-              { id: 'in-person', label: '📍 In person' },
+              { id: 'online',    label: 'Online' },
+              { id: 'in-person', label: 'In person' },
             ].map(opt => (
               <button
                 key={opt.id}

@@ -21,7 +21,7 @@ function LoadingSpinner({ text = 'Loading...' }) {
 function ErrorMessage({ message = 'Something went wrong', onRetry }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40vh', flexDirection: 'column', gap: 12 }}>
-      <span style={{ fontSize: 32 }}>⚠️</span>
+      <span style={{ fontSize: 32 }}>!</span>
       <p style={{ color: 'var(--text-2)', fontSize: 14, margin: 0 }}>{message}</p>
       {onRetry && (
         <button className="li-btn li-btn--ghost li-btn--sm" onClick={onRetry}>

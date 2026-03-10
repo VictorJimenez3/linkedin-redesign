@@ -28,15 +28,15 @@ def get_conversations():
             "id": 2,
             "participant": {"id": 2, "name": "Priya Patel", "headline": "Product Manager at Meta | Former Consultant | MBA Wharton", "avatarColor": "#E67E22", "isOnline": False},
             "unreadCount": 0,
-            "lastMessage": "Will do! Thanks for the feedback on the PRD 🙏",
+            "lastMessage": "Will do! Thanks for the feedback on the PRD.",
             "lastTimestamp": _ts(2 * 3600000),
             "isOnline": False,
             "messages": [
-                {"id": 1, "senderId": 2, "text": "Hey Alex! Congrats on your latest article — it went viral 🚀", "timestamp": _ts(5 * 3600000), "isRead": True},
+                {"id": 1, "senderId": 2, "text": "Hey Alex! Congrats on your latest article — it went viral", "timestamp": _ts(5 * 3600000), "isRead": True},
                 {"id": 2, "senderId": 1, "text": "Haha thanks! I was surprised. People seem to really resonate with the scalability patterns.", "timestamp": _ts(int(4.5 * 3600000)), "isRead": True},
                 {"id": 3, "senderId": 2, "text": "Could I get your eyes on a PRD I'm writing? It's about improving our API developer experience and I think you'd have great input.", "timestamp": _ts(4 * 3600000), "isRead": True},
                 {"id": 4, "senderId": 1, "text": "Of course! Send it over.", "timestamp": _ts(int(3.5 * 3600000)), "isRead": True},
-                {"id": 5, "senderId": 2, "text": "Will do! Thanks for the feedback on the PRD 🙏", "timestamp": _ts(2 * 3600000), "isRead": True}
+                {"id": 5, "senderId": 2, "text": "Will do! Thanks for the feedback on the PRD.", "timestamp": _ts(2 * 3600000), "isRead": True}
             ]
         },
         {

@@ -1,67 +1,51 @@
 """
-Nexus — Mock Flask Backend
+Nexus — Flask Backend  (backend/app.py)
 CS485 Project
+
+All mutable data (users, posts, conversations, messages, notifications,
+jobs, companies) lives in SQLite via database.py.
+
+Static reference data (events, groups, courses, news, invitations, hashtags)
+is served directly from data/*.py — they have no mutation routes.
 
 Run:
     pip install flask flask-cors
     python backend/app.py
-
-API base: http://localhost:5000/api
 """
 
 from flask import Flask, jsonify, request, abort, send_from_directory
 from flask_cors import CORS
 import sys
 import os
-import time
-import copy
+import re
 
 # Allow running from repo root: python backend/app.py
 sys.path.insert(0, os.path.dirname(__file__))
-import data as db
-import outreach as outreach_mod
 
-# Serve the project root (one level up from backend/) as static files
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+import database as dbl          # SQLite data layer
+import outreach as outreach_mod  # NX.BE.OutreachModule
 
-app = Flask(__name__, static_folder=ROOT_DIR, static_url_path='')
+# Static reference data (read-only, never mutated)
+import data as static_data
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+app = Flask(__name__, static_folder=ROOT_DIR, static_url_path="")
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
+# Initialise DB (creates schema + seeds if empty)
+dbl.init_db()
 
-@app.route('/')
+
+# ── Serve SPA ─────────────────────────────────────────────────
+
+@app.route("/")
 def index():
-    return send_from_directory(ROOT_DIR, 'app.html')
-
-# ── In-memory mutable stores ──────────────────────────────────
-# These are initialized lazily on first request so timestamps
-# are relative to server start, not module import time.
-_posts_store = None
-_notifications_store = None
-_conversations_store = None
-
-
-def get_posts_store():
-    global _posts_store
-    if _posts_store is None:
-        _posts_store = copy.deepcopy(db.get_posts())
-    return _posts_store
-
-
-def get_notifications_store():
-    global _notifications_store
-    if _notifications_store is None:
-        _notifications_store = copy.deepcopy(db.NOTIFICATIONS)
-    return _notifications_store
-
-
-def get_conversations_store():
-    global _conversations_store
-    if _conversations_store is None:
-        _conversations_store = copy.deepcopy(db.get_conversations())
-    return _conversations_store
+    return send_from_directory(ROOT_DIR, "app.html")
 
 
 # ── Error handlers ────────────────────────────────────────────
+
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({"error": str(e)}), 404
@@ -72,309 +56,281 @@ def bad_request(e):
     return jsonify({"error": str(e)}), 400
 
 
-# ── User Endpoints ────────────────────────────────────────────
+@app.errorhandler(409)
+def conflict(e):
+    return jsonify({"error": str(e)}), 409
+
+
+# ══════════════════════════════════════════════════════════════
+# Auth / Account Endpoints
+# ══════════════════════════════════════════════════════════════
+
+@app.route("/api/auth/register", methods=["POST"])
+def register():
+    """
+    POST /api/auth/register — create a new user account.
+    Body: { name, email, password }
+    Returns the new user dict (201) or 400/409 on validation failure.
+    """
+    body = request.get_json(silent=True) or {}
+
+    name = (body.get("name") or "").strip()
+    email = (body.get("email") or "").strip().lower()
+    password = body.get("password") or ""
+
+    if not name:
+        abort(400, description="name is required")
+    if not email or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        abort(400, description="a valid email is required")
+    if len(password) < 8:
+        abort(400, description="password must be at least 8 characters")
+
+    try:
+        user = dbl.create_user(name, email, password)
+    except ValueError as exc:
+        abort(409, description=str(exc))
+
+    return jsonify(user), 201
+
+
+# ══════════════════════════════════════════════════════════════
+# User Endpoints
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/me")
 def get_me():
     """GET /api/me — current logged-in user profile."""
-    return jsonify(db.CURRENT_USER)
+    user = dbl.get_current_user()
+    if not user:
+        abort(404, description="Current user not found")
+    return jsonify(user)
 
 
 @app.route("/api/users")
 def get_users():
-    """GET /api/users — all users in the network."""
-    return jsonify(db.USERS)
+    """GET /api/users — all users in the network (excludes current user)."""
+    return jsonify(dbl.get_all_users())
 
 
 @app.route("/api/users/<int:user_id>")
 def get_user(user_id):
     """GET /api/users/:id — single user by ID."""
-    user = db.get_user_by_id(user_id)
+    user = dbl.get_user_by_id(user_id)
     if not user:
         abort(404, description=f"User {user_id} not found")
     return jsonify(user)
 
 
-# ── Feed Endpoints ────────────────────────────────────────────
-def _flatten_post(post):
-    """Normalize a post object to the shape the React frontend expects."""
-    author = post.get("author") or {}
-    reactions = post.get("reactions") or {}
-    comments_list = post.get("commentsList") or []
-    # Flatten each comment's nested author to just a name string
-    flat_comments = [
-        {"author": c["author"]["name"] if isinstance(c.get("author"), dict) else str(c.get("author", "")),
-         "text": c.get("text", "")}
-        for c in comments_list
-    ]
-    return {
-        "id": post.get("id"),
-        "author": author.get("name", "Unknown"),
-        "authorId": author.get("id"),
-        "authorTitle": author.get("headline", ""),
-        "content": post.get("content", ""),
-        "image": post.get("image"),
-        "createdAt": post.get("timestamp"),
-        "likeCount": reactions.get("like", 0),
-        "commentCount": post.get("comments", 0) if isinstance(post.get("comments"), int) else len(comments_list),
-        "comments": flat_comments,
-        "totalReactions": post.get("totalReactions", 0),
-        "reposts": post.get("reposts", 0),
-        "isLiked": post.get("isLiked", False),
-        "isSaved": post.get("isSaved", False),
-        "reactionType": post.get("reactionType"),
-        "type": post.get("type", "text"),
-        "tags": post.get("tags", []),
-    }
+@app.route("/api/users/<int:user_id>", methods=["DELETE"])
+def delete_user(user_id):
+    """
+    DELETE /api/users/:id — remove a user account and all their data.
+    Cannot delete user id=1 (the primary demo account).
+    Returns 204 on success, 404 if not found, 403 if protected.
+    """
+    try:
+        deleted = dbl.delete_user(user_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 403
 
+    if not deleted:
+        abort(404, description=f"User {user_id} not found")
+    return "", 204
+
+
+# ══════════════════════════════════════════════════════════════
+# Feed Endpoints
+# ══════════════════════════════════════════════════════════════
 
 @app.route("/api/feed")
 def get_feed():
-    """GET /api/feed — paginated posts feed."""
-    return jsonify([_flatten_post(p) for p in get_posts_store()])
+    """GET /api/feed — all posts, newest first."""
+    return jsonify(dbl.get_all_posts())
 
 
 @app.route("/api/feed", methods=["POST"])
 def create_post():
     """POST /api/feed — create a new post. Body: {content: str}"""
-    body = request.get_json(silent=True)
-    if not body or not body.get("content", "").strip():
+    body = request.get_json(silent=True) or {}
+    content = (body.get("content") or "").strip()
+    if not content:
         abort(400, description="content is required and must not be empty")
 
-    new_post = {
-        "id": int(time.time() * 1000),
-        "author": db.CURRENT_USER,
-        "content": body["content"].strip(),
-        "timestamp": int(time.time() * 1000),
-        "reactions": {"like": 0, "celebrate": 0, "love": 0, "insightful": 0, "support": 0, "funny": 0},
-        "totalReactions": 0,
-        "comments": 0,
-        "commentsList": [],
-        "reposts": 0,
-        "isLiked": False,
-        "isSaved": False,
-        "reactionType": None,
-        "type": "text",
-        "tags": [],
-    }
-    get_posts_store().insert(0, new_post)
-    return jsonify(_flatten_post(new_post)), 201
+    current_user = dbl.get_current_user()
+    if not current_user:
+        abort(500, description="Current user not found")
+
+    post = dbl.create_post(current_user["id"], content)
+    return jsonify(post), 201
 
 
-# ── Job Endpoints ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Job Endpoints
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/jobs")
 def get_jobs():
     """GET /api/jobs — all job listings."""
-    return jsonify(db.JOBS)
+    return jsonify(dbl.get_all_jobs())
 
 
 @app.route("/api/jobs/<int:job_id>")
 def get_job(job_id):
     """GET /api/jobs/:id — single job listing."""
-    job = db.get_job_by_id(job_id)
+    job = dbl.get_job_by_id(job_id)
     if not job:
         abort(404, description=f"Job {job_id} not found")
     return jsonify(job)
 
 
-# ── Company Endpoints ─────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Company Endpoints
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/companies/<int:company_id>")
 def get_company(company_id):
     """GET /api/companies/:id — company detail."""
-    company = db.get_company_by_id(company_id)
+    company = dbl.get_company_by_id(company_id)
     if not company:
         abort(404, description=f"Company {company_id} not found")
     return jsonify(company)
 
 
-# ── Conversation Endpoints ────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Conversation Endpoints
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/conversations")
 def get_conversations_list():
-    """GET /api/conversations — all message threads (without full message history)."""
-    convs = get_conversations_store()
-    summaries = []
-    for c in convs:
-        p = c.get("participant") or {}
-        summaries.append({
-            "id": c["id"],
-            "participantId": p.get("id"),
-            "participantName": p.get("name", "Unknown"),
-            "participantTitle": p.get("headline", ""),
-            "isOnline": p.get("isOnline", False),
-            "unreadCount": c.get("unreadCount", 0),
-            "lastMessage": c.get("lastMessage", ""),
-            "lastMessageTime": c.get("lastTimestamp"),
-        })
-    return jsonify(summaries)
+    """GET /api/conversations — all message threads (summaries)."""
+    return jsonify(dbl.get_all_conversations())
 
 
 @app.route("/api/conversations/<int:conv_id>")
 def get_conversation(conv_id):
     """GET /api/conversations/:id — single conversation with full messages."""
-    conv = db.get_conversation_by_id(conv_id, get_conversations_store())
+    conv = dbl.get_conversation_by_id(conv_id)
     if not conv:
         abort(404, description=f"Conversation {conv_id} not found")
-    p = conv.get("participant") or {}
-    messages = []
-    for m in (conv.get("messages") or []):
-        messages.append({**m, "isMe": m.get("senderId") == 1})
-    return jsonify({
-        "id": conv["id"],
-        "participantId": p.get("id"),
-        "participantName": p.get("name", "Unknown"),
-        "participantTitle": p.get("headline", ""),
-        "isOnline": p.get("isOnline", False),
-        "messages": messages,
-    })
+    return jsonify(conv)
 
 
 @app.route("/api/conversations/<int:conv_id>/messages", methods=["POST"])
-def send_message(conv_id):
+def post_message(conv_id):
     """POST /api/conversations/:id/messages — send a message. Body: {text: str}"""
-    convs = get_conversations_store()
-    conv = db.get_conversation_by_id(conv_id, convs)
+    # Verify conversation exists
+    conv = dbl.get_conversation_by_id(conv_id)
     if not conv:
         abort(404, description=f"Conversation {conv_id} not found")
 
-    body = request.get_json(silent=True)
-    if not body or not body.get("text", "").strip():
+    body = request.get_json(silent=True) or {}
+    text = (body.get("text") or "").strip()
+    if not text:
         abort(400, description="text is required")
 
-    msg = {
-        "id": int(time.time() * 1000),
-        "senderId": 1,
-        "isMe": True,
-        "text": body["text"].strip(),
-        "timestamp": int(time.time() * 1000),
-        "isRead": True,
-    }
-    conv.setdefault("messages", []).append(msg)
-    conv["lastMessage"] = msg["text"]
-    conv["lastTimestamp"] = msg["timestamp"]
+    current_user = dbl.get_current_user()
+    if not current_user:
+        abort(500, description="Current user not found")
+    msg = dbl.send_message(conv_id, sender_id=current_user["id"], text=text)
     return jsonify(msg), 201
 
 
-# ── Notification Endpoints ────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Notification Endpoints
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/notifications")
 def get_notifications():
     """GET /api/notifications — all notifications."""
-    return jsonify(get_notifications_store())
+    return jsonify(dbl.get_all_notifications())
 
 
 @app.route("/api/notifications/<int:notif_id>/read", methods=["PATCH"])
 def mark_notification_read(notif_id):
     """PATCH /api/notifications/:id/read — mark a notification as read."""
-    notifs = get_notifications_store()
-    notif = next((n for n in notifs if n["id"] == notif_id), None)
+    notif = dbl.mark_notification_read(notif_id)
     if not notif:
         abort(404, description=f"Notification {notif_id} not found")
-    notif["isRead"] = True
     return jsonify(notif)
 
 
 @app.route("/api/notifications/read-all", methods=["PATCH"])
 def mark_all_notifications_read():
     """PATCH /api/notifications/read-all — mark all notifications as read."""
-    for n in get_notifications_store():
-        n["isRead"] = True
+    dbl.mark_all_notifications_read()
     return jsonify({"success": True})
 
 
-# ── Events Endpoints ──────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Static Reference Data (read-only, served from data/*.py)
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/events")
 def get_events():
-    """GET /api/events — all events."""
-    return jsonify(db.get_events())
+    return jsonify(static_data.get_events())
 
 
-# ── Groups Endpoints ──────────────────────────────────────────
 @app.route("/api/groups")
 def get_groups():
-    """GET /api/groups — all groups."""
-    return jsonify(db.GROUPS)
+    return jsonify(static_data.GROUPS)
 
 
 @app.route("/api/groups/<int:group_id>")
 def get_group(group_id):
-    """GET /api/groups/:id — single group detail."""
-    group = db.get_group_by_id(group_id)
+    group = static_data.get_group_by_id(group_id)
     if not group:
         abort(404, description=f"Group {group_id} not found")
     return jsonify(group)
 
 
-# ── Courses Endpoints ─────────────────────────────────────────
 @app.route("/api/courses")
 def get_courses():
-    """GET /api/courses — all courses."""
-    return jsonify(db.COURSES)
+    return jsonify(static_data.COURSES)
 
 
-# ── Misc Endpoints ────────────────────────────────────────────
 @app.route("/api/news")
 def get_news():
-    """GET /api/news — trending news items."""
-    return jsonify(db.NEWS)
+    return jsonify(static_data.NEWS)
 
 
 @app.route("/api/invitations")
 def get_invitations():
-    """GET /api/invitations — pending connection invitations."""
-    return jsonify(db.INVITATIONS)
+    return jsonify(static_data.INVITATIONS)
 
 
 @app.route("/api/hashtags")
 def get_hashtags():
-    """GET /api/hashtags — suggested hashtags."""
-    return jsonify(db.HASHTAGS)
+    return jsonify(static_data.HASHTAGS)
 
 
-# ── Search Endpoint ───────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Search Endpoint
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/search")
 def search():
-    """GET /api/search?q=query — search across users, jobs, and posts."""
-    q = request.args.get("q", "").strip().lower()
+    """GET /api/search?q=query — search across users, jobs, companies, posts."""
+    q = (request.args.get("q") or "").strip()
     if not q:
         return jsonify({"users": [], "jobs": [], "companies": [], "posts": [], "query": ""})
-
-    users = [
-        u for u in db.USERS
-        if q in u["name"].lower() or q in u.get("headline", "").lower()
-    ]
-    jobs = [
-        j for j in db.JOBS
-        if q in j.get("title", "").lower() or q in j.get("company", "").lower() or q in j.get("industry", "").lower()
-    ]
-    companies = [
-        c for c in db.COMPANIES
-        if q in c.get("name", "").lower() or q in c.get("industry", "").lower()
-    ]
-    posts = [
-        p for p in get_posts_store()
-        if q in p.get("content", "").lower()
-    ]
-
-    return jsonify({
-        "query": q,
-        "users": users[:10],
-        "jobs": jobs[:10],
-        "companies": companies[:10],
-        "posts": posts[:10],
-    })
+    return jsonify(dbl.search(q))
 
 
-# ── Profile Readiness Endpoint ────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Profile Readiness Endpoint
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/profile-readiness")
 def get_profile_readiness():
     """GET /api/profile-readiness — compute profile completeness score."""
-    u = db.CURRENT_USER
+    u = dbl.get_current_user()
 
-    headline_len = len(u.get("headline", "").strip())
-    about_len    = len(u.get("about", "").strip())
-    skill_count  = len(u.get("skills", []))
-    exp_count    = len(u.get("experience", []))
-    edu_count    = len(u.get("education", []))
+    headline_len = len((u.get("headline") or "").strip())
+    about_len    = len((u.get("about") or "").strip())
+    skill_count  = len(u.get("skills") or [])
+    exp_count    = len(u.get("experience") or [])
+    edu_count    = len(u.get("education") or [])
 
-    # section scores (0–100) used by the progress bars in ProfileReadinessPanel
     raw_sections = [
         ("photo",    "Photo",      100 if u.get("avatarColor") else 0),
         ("headline", "Headline",   min(100, int(headline_len / 60 * 100))),
@@ -384,35 +340,32 @@ def get_profile_readiness():
         ("skills",   "Skills",     min(100, int(skill_count / 10 * 100))),
     ]
     sections = [{"key": k, "label": l, "score": s} for k, l, s in raw_sections]
-
-    # overall score: weighted average of section scores
     score = round(sum(s for _, _, s in raw_sections) / len(raw_sections))
 
-    def _fix_status(section_score):
-        if section_score >= 80: return "done"
-        if section_score >= 40: return "warn"
+    def _status(section_score):
+        if section_score >= 80:
+            return "done"
+        if section_score >= 40:
+            return "warn"
         return "bad"
 
-    fixes = [
-        {"key": k, "label": l, "status": _fix_status(s)}
-        for k, l, s in raw_sections
-    ]
-
+    fixes = [{"key": k, "label": l, "status": _status(s)} for k, l, s in raw_sections]
     return jsonify({"score": score, "sections": sections, "fixes": fixes})
 
 
-# ── Outreach — Story #1 ───────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Outreach — Story #1  (NX.API.3)
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/outreach/generate", methods=["POST"])
 def outreach_generate():
-    """POST /api/outreach/generate — personalised outreach draft (NX.API.1)."""
+    """POST /api/outreach/generate — personalised outreach draft."""
     body = request.get_json(silent=True) or {}
 
-    # recipientId: required, must be a positive integer (floats rejected explicitly
-    # because int(1.5) would silently truncate to 1 in Python)
     raw_id = body.get("recipientId")
     if raw_id is None:
         abort(400, description="recipientId is required")
-    if isinstance(raw_id, float) or isinstance(raw_id, bool):
+    if isinstance(raw_id, (float, bool)):
         abort(400, description="recipientId must be a positive integer")
     try:
         recipient_id = int(raw_id)
@@ -421,39 +374,39 @@ def outreach_generate():
     except (TypeError, ValueError):
         abort(400, description="recipientId must be a positive integer")
 
-    recipient = db.get_user_by_id(recipient_id)
+    recipient = dbl.get_user_by_id(recipient_id)
     if not recipient:
         abort(404, description=f"User {recipient_id} not found")
 
-    # tone: whitelist — unknown values silently default (AC-2)
-    tone = outreach_mod.sanitize_text(str(body.get("tone", "")), 20).lower()
+    tone = outreach_mod.sanitize_text(str(body.get("tone") or ""), 20).lower()
     if tone not in outreach_mod.VALID_TONES:
         tone = "professional"
 
-    # goal: whitelist — unknown values silently default (AC-3)
-    goal = outreach_mod.sanitize_text(str(body.get("goal", "")), 20).lower()
+    goal = outreach_mod.sanitize_text(str(body.get("goal") or ""), 20).lower()
     if goal not in outreach_mod.VALID_GOALS:
         goal = "networking"
 
-    # custom_note: strip HTML/control chars, cap at 200 chars (AC-4, NX.TF.11)
     custom_note = outreach_mod.sanitize_text(
-        body.get("custom_note", ""),
-        outreach_mod.MAX_CUSTOM_NOTE,
+        body.get("custom_note") or "", outreach_mod.MAX_CUSTOM_NOTE
     )
 
+    current_user = dbl.get_current_user()
     result = outreach_mod.generate_outreach_message(
-        db.CURRENT_USER,
+        current_user,
         recipient,
         {"tone": tone, "goal": goal, "custom_note": custom_note},
     )
     return jsonify(result), 200
 
 
-# ── Outreach — Story #7 ───────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# Outreach — Story #7  (NX.API.4)
+# ══════════════════════════════════════════════════════════════
+
 @app.route("/api/outreach/readiness")
 def outreach_readiness():
-    """GET /api/outreach/readiness?userId=<int> — profile readiness score (NX.API.2)."""
-    raw_id = request.args.get("userId", "").strip()
+    """GET /api/outreach/readiness?userId=<int> — profile readiness score."""
+    raw_id = (request.args.get("userId") or "").strip()
 
     if raw_id:
         try:
@@ -463,11 +416,11 @@ def outreach_readiness():
         except (TypeError, ValueError):
             abort(400, description="userId must be a positive integer")
 
-        user = db.get_user_by_id(user_id)
+        user = dbl.get_user_by_id(user_id)
         if not user:
             abort(404, description=f"User {user_id} not found")
     else:
-        user = db.CURRENT_USER
+        user = dbl.get_current_user()
 
     return jsonify(outreach_mod.compute_outreach_readiness(user)), 200
 

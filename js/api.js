@@ -81,5 +81,11 @@
       request('POST', '/outreach/generate', { recipientId, tone, goal, custom_note: customNote }),
     getOutreachReadiness: (userId) =>
       request('GET', userId ? `/outreach/readiness?userId=${encodeURIComponent(userId)}` : '/outreach/readiness'),
+
+    // ── Account ───────────────────────────────────────────────
+    register: (name, email, password) =>
+      request('POST', '/auth/register', { name, email, password }),
+    deleteUser: (id) =>
+      request('DELETE', `/users/${id}`),
   };
 })();

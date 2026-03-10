@@ -43,7 +43,7 @@ function FeedPage() {
     };
     setLocalPosts(prev => [newPost, ...(prev || [])]);
     API.createPost(content).catch(() => {});
-    showToast('Post shared! 🎉', 'success');
+    showToast('Post shared!', 'success');
   }
 
   function toggleCommentsFor(postId) {
@@ -55,8 +55,8 @@ function FeedPage() {
   }
 
   const sponsored = [
-    { company: 'Stripe', logo: '🟦', desc: 'Join 1M+ businesses using Stripe to accept payments and manage revenue online.', tagline: 'Build the future of payments.', cta: 'Learn more', bg: 'linear-gradient(135deg,#635bff,#32325d)' },
-    { company: 'Figma', logo: '🎨', desc: 'The collaborative interface design tool that teams love. Start designing faster today.', tagline: 'Design, prototype, and collaborate.', cta: 'Try for free', bg: 'linear-gradient(135deg,#f24e1e,#ff7262)' },
+    { company: 'Stripe', logo: '', desc: 'Join 1M+ businesses using Stripe to accept payments and manage revenue online.', tagline: 'Build the future of payments.', cta: 'Learn more', bg: 'linear-gradient(135deg,#635bff,#32325d)' },
+    { company: 'Figma', logo: '', desc: 'The collaborative interface design tool that teams love. Start designing faster today.', tagline: 'Design, prototype, and collaborate.', cta: 'Try for free', bg: 'linear-gradient(135deg,#f24e1e,#ff7262)' },
   ];
 
   const suggUsers = (users || []).slice(0, 4);
@@ -263,13 +263,13 @@ function PostCreator({ user, onPost, openModal, showToast }) {
       {expanded && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', gap: 4 }}>
-            {[['🖼️','Photo'],['🎬','Video'],['📅','Event'],['📄','Article']].map(([icon, label]) => (
+            {[['Photo','Photo'],['Video','Video'],['Event','Event'],['Article','Article']].map(([icon, label]) => (
               <button key={label} title={label}
                 onClick={() => { if (label === 'Event') navigate('events'); else showToast(`${label} upload — coming soon`); }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                <span style={{ fontSize: 18 }}>{icon}</span>
+                <span style={{ fontSize: 13 }}>{icon}</span>
               </button>
             ))}
           </div>
@@ -368,19 +368,19 @@ function FeedPost({ post, liked, onLike, commentsOpen, onToggleComments, followi
   const commentCount = post.commentCount || (typeof post.comments === 'number' ? post.comments : (post.commentsList?.length || 0));
   const repostCount = post.repostCount || post.reposts || 0;
 
-  const reactionEmojis = { like: '👍', celebrate: '🎉', love: '❤️', support: '🤝', insightful: '💡', curious: '🤔', funny: '😄' };
-  const topReactEmojis = post.reactions ? Object.entries(post.reactions).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => reactionEmojis[k] || '👍') : [];
+  const reactionLabels = { like: 'Like', celebrate: 'Celebrate', love: 'Love', support: 'Support', insightful: 'Insightful', curious: 'Curious', funny: 'Funny' };
+  const topReactLabels = post.reactions ? Object.entries(post.reactions).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => reactionLabels[k] || 'Like') : [];
 
   const reactionLabel = localReaction || (liked ? 'Liked' : 'Like');
   const isFollowingAuthor = following && following.has(String(authorId));
 
   const reactions = [
-    { emoji: '👍', name: 'Like', color: '#0F5DBD' },
-    { emoji: '❤️', name: 'Love', color: '#CC1016' },
-    { emoji: '🎉', name: 'Celebrate', color: '#E7A500' },
-    { emoji: '💡', name: 'Insightful', color: '#5F9B41' },
-    { emoji: '🤔', name: 'Curious', color: '#E06847' },
-    { emoji: '😄', name: 'Funny', color: '#E7A500' },
+    { emoji: '', name: 'Like', color: '#0F5DBD' },
+    { emoji: '', name: 'Love', color: '#CC1016' },
+    { emoji: '', name: 'Celebrate', color: '#E7A500' },
+    { emoji: '', name: 'Insightful', color: '#5F9B41' },
+    { emoji: '', name: 'Curious', color: '#E06847' },
+    { emoji: '', name: 'Funny', color: '#E7A500' },
   ];
 
   function handleLikeHover() {
@@ -494,9 +494,9 @@ function FeedPost({ post, liked, onLike, commentsOpen, onToggleComments, followi
       {(totalReactions > 0 || commentCount > 0 || repostCount > 0) && (
         <div className="li-post__reactions">
           <div className="li-post__reaction-icons" onClick={() => showToast('Reactions — coming soon')} style={{ cursor: 'pointer' }}>
-            {topReactEmojis.length > 0 && (
+            {topReactLabels.length > 0 && (
               <span style={{ display: 'flex', marginRight: 4 }}>
-                {topReactEmojis.map((e, i) => (
+                {topReactLabels.map((e, i) => (
                   <span key={i} className="li-post__reaction-emoji" style={{ marginLeft: i > 0 ? -4 : 0 }}>{e}</span>
                 ))}
               </span>
@@ -547,7 +547,7 @@ function FeedPost({ post, liked, onLike, commentsOpen, onToggleComments, followi
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, padding: '2px 4px', borderRadius: '50%', transition: 'transform 0.1s' }}
                   onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.4)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-                  {r.emoji}
+                  {r.emoji || r.name}
                 </button>
               ))}
             </div>

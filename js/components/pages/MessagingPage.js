@@ -100,19 +100,19 @@ function MessagingPage() {
       // Story #7 — primary: outreach readiness endpoint
       const data = await API.getOutreachReadiness();
       setReadiness(_transformOutreachReadiness(data));
-      if (refresh) showToast(‘Score refreshed’, ‘success’);
+      if (refresh) showToast('Score refreshed', 'success');
     } catch (_e1) {
       try {
         // Secondary fallback: profile-readiness endpoint
         const data = await API.getProfileReadiness();
         setReadiness(data);
-        if (refresh) showToast(‘Score refreshed’, ‘success’);
+        if (refresh) showToast('Score refreshed', 'success');
       } catch (_e2) {
         // Final fallback: local mock
         const mock = mockBackendGetProfileReadiness(currentUser, { jitter: refresh });
         setReadiness(mock);
-        setReadinessError(‘Backend not running — using mocked score’);
-        if (refresh) showToast(‘Score refreshed (mock)’, ‘info’);
+        setReadinessError('Backend not running — using mocked score');
+        if (refresh) showToast('Score refreshed (mock)', 'info');
       }
     } finally {
       setReadinessLoading(false);
@@ -128,7 +128,7 @@ function MessagingPage() {
     const fixes = (data.breakdown || []).map(item => ({
       key: item.key,
       label: item.tip || item.label,
-      status: item.met ? ‘done’ : (item.weight >= 15 ? ‘bad’ : ‘warn’),
+      status: item.met ? 'done' : (item.weight >= 15 ? 'bad' : 'warn'),
     }));
     return {
       score: data.score,
@@ -310,7 +310,7 @@ function MessagingPage() {
     const s = guideStateByConv[selectedId];
     if (!s) return;
     if (!s.goal) return;
-    // Don’t touch preview when backend has generated content or is generating
+    // Don't touch preview when backend has generated content or is generating
     if (s.backendVariants?.length > 0 || s.generating) return;
     if (s.step === 2 || s.step === 3) {
       setGuideStateByConv(prev => {
@@ -561,7 +561,7 @@ function OutreachGuidePanel({
         <div className="li-msg-guide__steps">
           {state.step === 1 && (
             <div className="li-msg-guide__step">
-              <div className="li-msg-guide__step-label">What’s the purpose of your message?</div>
+              <div className="li-msg-guide__step-label">What's the purpose of your message?</div>
               <div className="li-msg-guide__goals">
                 {_OUTREACH_GOALS.map(g => (
                   <div
@@ -871,14 +871,14 @@ const _OUTREACH_TIPS = {
     'End with an easy yes/no question.',
   ],
   job: [
-    'Mention the role + why you’re excited (1 line).',
+    'Mention the role + why you're excited (1 line).',
     'Add a quick signal (project/skill) to show fit.',
     'Ask for next step: “open to a quick chat?”',
   ],
   network: [
     'Be specific about why you reached out.',
     'Reference something from their profile if possible.',
-    'Don’t ask for too much — ask to connect first.',
+    'Don't ask for too much — ask to connect first.',
   ],
   mentor: [
     'Be respectful with time (20 minutes).',
@@ -892,7 +892,7 @@ const _OUTREACH_TIPS = {
   ],
   referral: [
     'Ask only after showing fit (skill/project).',
-    'Make it easy: “If you’re open to referring…”',
+    'Make it easy: “If you're open to referring…”',
     'Respect a “no” and thank them anyway.',
   ],
 };
@@ -911,39 +911,39 @@ const _OUTREACH_TEMPLATES = {
   job: [
     {
       tone: 'Direct',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI saw the ${d.role || '[role]'} opening at ${d.company || '[Company]'} and I’m really interested. I’m ${d.yourRole || '[your name/major]'} with experience in ${d.field || '[skill/area]'}.\n\nWould you be open to a quick chat about the team and what you look for in candidates?`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI saw the ${d.role || '[role]'} opening at ${d.company || '[Company]'} and I'm really interested. I'm ${d.yourRole || '[your name/major]'} with experience in ${d.field || '[skill/area]'}.\n\nWould you be open to a quick chat about the team and what you look for in candidates?`,
     },
     {
       tone: 'Warm',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nHope you’re doing well! I’m ${d.yourRole || '[your name/major]'} and I’m exploring opportunities in ${d.field || '[field]'}.\n\nIf you have 10–15 minutes, I’d love to hear what your experience has been like at ${d.company || '[Company]'}.`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nHope you're doing well! I'm ${d.yourRole || '[your name/major]'} and I'm exploring opportunities in ${d.field || '[field]'}.\n\nIf you have 10–15 minutes, I'd love to hear what your experience has been like at ${d.company || '[Company]'}.`,
     },
   ],
   network: [
     {
       tone: 'Friendly',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI’m ${d.yourRole || '[your name/major]'} and I’m trying to learn more about ${d.field || '[field]'}.\n\nYour path really stood out to me — would you be open to connecting?`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI'm ${d.yourRole || '[your name/major]'} and I'm trying to learn more about ${d.field || '[field]'}.\n\nYour path really stood out to me — would you be open to connecting?`,
     },
     {
       tone: 'Professional',
-      template: (d) => `Hello ${d.recipient || '[Name]'},\n\nI’m ${d.yourRole || '[your name/major]'} and I’m building my network in ${d.field || '[field]'}. I’d love to connect and follow your work.\n\nThanks!`,
+      template: (d) => `Hello ${d.recipient || '[Name]'},\n\nI'm ${d.yourRole || '[your name/major]'} and I'm building my network in ${d.field || '[field]'}. I'd love to connect and follow your work.\n\nThanks!`,
     },
   ],
   mentor: [
     {
       tone: 'Warm',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI’m ${d.yourRole || '[your name/major]'} and I’m trying to grow in ${d.field || '[field]'}. I’d love to learn from your experience.\n\nWould you be open to a quick 15–20 minute chat sometime?`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI'm ${d.yourRole || '[your name/major]'} and I'm trying to grow in ${d.field || '[field]'}. I'd love to learn from your experience.\n\nWould you be open to a quick 15–20 minute chat sometime?`,
     },
   ],
   followup: [
     {
       tone: 'Polite',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nIt was great connecting ${d.context ? `(${d.context})` : 'recently'}. Thanks again for your time.\n\nIf you have a moment, I’d love to follow up on ${d.field || '[topic]'} and ask one quick question.`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nIt was great connecting ${d.context ? `(${d.context})` : 'recently'}. Thanks again for your time.\n\nIf you have a moment, I'd love to follow up on ${d.field || '[topic]'} and ask one quick question.`,
     },
   ],
   referral: [
     {
       tone: 'Respectful',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI’m applying to ${d.company || '[Company]'} for the ${d.role || '[role]'} position. I’m ${d.yourRole || '[your name/major]'} and I’ve been working on ${d.field || '[relevant project/skill]'}.\n\nIf you’re open to it, would you consider referring me? Totally understand if not — I appreciate your time either way.`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI'm applying to ${d.company || '[Company]'} for the ${d.role || '[role]'} position. I'm ${d.yourRole || '[your name/major]'} and I've been working on ${d.field || '[relevant project/skill]'}.\n\nIf you're open to it, would you consider referring me? Totally understand if not — I appreciate your time either way.`,
     },
   ],
 };

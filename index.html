@@ -592,7 +592,7 @@
       <!-- Step 4 -->
       <div class="step" id="step-4">
         <h2 class="step-heading">What's your location?</h2>
-        <p class="step-sub">We use this to help you find relevant jobs and people.</p>
+        <p class="step-sub">We use this to help you find relevant jobs and people. <em style="color:rgba(0,0,0,0.45);font-style:normal;">(optional)</em></p>
         <div class="form-group">
           <label for="s-country">Country/Region</label>
           <select id="s-country">
@@ -618,14 +618,14 @@
         </div>
         <div class="step-actions">
           <button class="btn-primary" onclick="nextStep(4)">Continue</button>
-          <div class="step-back-link"><a href="#" onclick="prevStep(4); return false;">Go back</a></div>
+          <div class="step-back-link"><a href="#" onclick="skipStep(4); return false;">Skip for now</a> &nbsp;·&nbsp; <a href="#" onclick="prevStep(4); return false;">Go back</a></div>
         </div>
       </div>
 
       <!-- Step 5 -->
       <div class="step" id="step-5">
         <h2 class="step-heading">Your most recent job title</h2>
-        <p class="step-sub">Tell us a bit about your work experience.</p>
+        <p class="step-sub">Tell us a bit about your work experience. <em style="color:rgba(0,0,0,0.45);font-style:normal;">(optional)</em></p>
         <div class="form-group">
           <label for="s-title">Job title</label>
           <input type="text" id="s-title" placeholder="e.g. Software Engineer" />
@@ -649,26 +649,26 @@
         </div>
         <div class="step-actions">
           <button class="btn-primary" onclick="nextStep(5)">Continue</button>
-          <div class="step-back-link"><a href="#" onclick="prevStep(5); return false;">Go back</a></div>
+          <div class="step-back-link"><a href="#" onclick="skipStep(5); return false;">Skip for now</a> &nbsp;·&nbsp; <a href="#" onclick="prevStep(5); return false;">Go back</a></div>
         </div>
       </div>
 
       <!-- Step 6 -->
       <div class="step" id="step-6">
         <h2 class="step-heading">What industry do you work in?</h2>
-        <p class="step-sub">This helps us personalize your experience.</p>
+        <p class="step-sub">This helps us personalize your experience. <em style="color:rgba(0,0,0,0.45);font-style:normal;">(optional)</em></p>
         <div class="industry-grid" id="industry-grid"></div>
         <span class="error-msg" id="s-industry-err" style="margin-top:8px;">Please select at least one industry.</span>
         <div class="step-actions">
           <button class="btn-primary" onclick="nextStep(6)">Continue</button>
-          <div class="step-back-link"><a href="#" onclick="prevStep(6); return false;">Go back</a></div>
+          <div class="step-back-link"><a href="#" onclick="skipStep(6); return false;">Skip for now</a> &nbsp;·&nbsp; <a href="#" onclick="prevStep(6); return false;">Go back</a></div>
         </div>
       </div>
 
       <!-- Step 7 -->
       <div class="step" id="step-7">
         <h2 class="step-heading">What kind of network do you want to build?</h2>
-        <p class="step-sub">We'll personalize your experience based on your goals.</p>
+        <p class="step-sub">We'll personalize your experience based on your goals. <em style="color:rgba(0,0,0,0.45);font-style:normal;">(optional)</em></p>
         <div class="radio-option"><input type="radio" name="network-goal" id="goal-1" value="job"><label for="goal-1">Find a new job</label></div>
         <div class="radio-option"><input type="radio" name="network-goal" id="goal-2" value="connect"><label for="goal-2">Connect with colleagues &amp; classmates</label></div>
         <div class="radio-option"><input type="radio" name="network-goal" id="goal-3" value="clients"><label for="goal-3">Find clients or business partners</label></div>
@@ -678,14 +678,14 @@
         <span class="error-msg" id="s-goal-err" style="margin-top:4px;">Please select an option.</span>
         <div class="step-actions">
           <button class="btn-primary" onclick="nextStep(7)">Continue</button>
-          <div class="step-back-link"><a href="#" onclick="prevStep(7); return false;">Go back</a></div>
+          <div class="step-back-link"><a href="#" onclick="skipStep(7); return false;">Skip for now</a> &nbsp;·&nbsp; <a href="#" onclick="prevStep(7); return false;">Go back</a></div>
         </div>
       </div>
 
       <!-- Step 8 -->
       <div class="step" id="step-8">
         <h2 class="step-heading">Are you a student?</h2>
-        <p class="step-sub">Students get exclusive Nexus features to help start their career.</p>
+        <p class="step-sub">Students get exclusive Nexus features to help start their career. <em style="color:rgba(0,0,0,0.45);font-style:normal;">(optional)</em></p>
         <div class="yes-no-btns">
           <button id="student-yes" onclick="selectStudent('yes')">Yes</button>
           <button id="student-no" onclick="selectStudent('no')">No</button>
@@ -693,17 +693,14 @@
         <span class="error-msg" id="s-student-err" style="margin-top:8px;">Please select an option.</span>
         <div class="step-actions" style="margin-top:16px;">
           <button class="btn-primary" onclick="nextStep(8)">Continue</button>
-          <div class="step-back-link"><a href="#" onclick="prevStep(8); return false;">Go back</a></div>
+          <div class="step-back-link"><a href="#" onclick="skipStep(8); return false;">Skip for now</a> &nbsp;·&nbsp; <a href="#" onclick="prevStep(8); return false;">Go back</a></div>
         </div>
       </div>
 
       <!-- Step 9 -->
       <div class="step" id="step-9">
         <h2 class="step-heading">What's your birthday?</h2>
-        <p class="step-sub">This won't be shown publicly on your profile.</p>
-        <p style="font-size:12px;color:rgba(0,0,0,0.6);margin-bottom:16px;">
-          <a href="#" style="color:#0F5DBD;">Why do we ask for this?</a>
-        </p>
+        <p class="step-sub">This won't be shown publicly on your profile. <em style="color:rgba(0,0,0,0.45);font-style:normal;">(optional)</em></p>
         <div class="bday-selects">
           <select id="s-bday-month">
             <option value="">Month</option>
@@ -720,7 +717,7 @@
         <span class="error-msg" id="s-bday-err" style="margin-top:8px;">Please enter a valid birthday.</span>
         <div class="step-actions">
           <button class="btn-primary" onclick="nextStep(9)">Agree &amp; Join</button>
-          <div class="step-back-link"><a href="#" onclick="prevStep(9); return false;">Go back</a></div>
+          <div class="step-back-link"><a href="#" onclick="skipStep(9); return false;">Skip for now</a> &nbsp;·&nbsp; <a href="#" onclick="prevStep(9); return false;">Go back</a></div>
         </div>
       </div>
 
@@ -843,6 +840,11 @@
   }
 
   function prevStep(from) { if (from > 1) goToStep(from - 1); }
+
+  function skipStep(from) {
+    if (from < TOTAL_STEPS) goToStep(from + 1);
+    else handleRegister();
+  }
 
   async function nextStep(from) {
     if (!validateStep(from)) return;

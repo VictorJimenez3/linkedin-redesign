@@ -353,9 +353,9 @@
       <div class="login-card">
         <h1>Sign in</h1>
         <div class="form-group">
-          <label for="login-email">Email or phone</label>
+          <label for="login-email">Email</label>
           <input type="text" id="login-email" autocomplete="email" />
-          <span class="error-msg" id="login-email-err">Please enter a valid email or phone number.</span>
+          <span class="error-msg" id="login-email-err">Please enter a valid email address.</span>
         </div>
         <div class="form-group">
           <label for="login-pw">Password</label>
@@ -529,11 +529,11 @@
       <!-- Step 1 -->
       <div class="step active" id="step-1">
         <h2 class="step-heading">Make the most of your professional life</h2>
-        <p class="step-sub">Email or phone number</p>
+        <p class="step-sub">Enter your email address</p>
         <div class="form-group">
-          <label for="s-email">Email or phone number</label>
+          <label for="s-email">Email</label>
           <input type="text" id="s-email" autocomplete="email" />
-          <span class="error-msg" id="s-email-err">Please enter a valid email or phone number.</span>
+          <span class="error-msg" id="s-email-err">Please enter a valid email address.</span>
         </div>
         <div class="step-actions">
           <button class="btn-primary" onclick="nextStep(1)">Agree &amp; Join</button>
@@ -731,7 +731,32 @@
   const API_BASE = 'http://localhost:5000/api';
   const TOTAL_STEPS = 9;
   let currentStep = 1;
+  let _registered = false;
   let studentChoice = null;
+
+  // ── Auto-redirect returning users with a valid session ────────────────────
+  (function checkExistingSession() {
+    try {
+      const token = localStorage.getItem('nx-token');
+      const storedUid = localStorage.getItem('nx-uid');
+      if (!token || !storedUid) return;
+      fetch(API_BASE + '/me', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(res => res.json())
+        .then(data => {
+          // Only redirect if the returned user matches the stored uid.
+          // The backend falls back to id=1 for invalid tokens, so without
+          // this check every stale token would redirect to Alex Johnson.
+          if (data && String(data.id) === String(storedUid)) {
+            window.location.href = 'app.html';
+          } else {
+            // Stale / invalid token — clear it so the login page shows
+            localStorage.removeItem('nx-token');
+            localStorage.removeItem('nx-uid');
+          }
+        })
+        .catch(() => {});
+    } catch (_) {}
+  })();
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -774,8 +799,11 @@
     if (err) { err.classList.remove('show'); err.style.display = 'none'; }
   }
 
-  function saveSession(token) {
-    try { localStorage.setItem('nx-token', token); } catch (_) {}
+  function saveSession(token, userId) {
+    try {
+      localStorage.setItem('nx-token', token);
+      if (userId) localStorage.setItem('nx-uid', String(userId));
+    } catch (_) {}
   }
 
   // ── Login ─────────────────────────────────────────────────────────────────
@@ -785,7 +813,7 @@
     const pw    = document.getElementById('login-pw').value;
     let ok = true;
 
-    if (!isValidEmail(email)) { fieldErr('login-email', 'Please enter a valid email address.'); ok = false; }
+    if (!isValidEmail(email)) { fieldErr('login-email', 'Please enter your email address.'); ok = false; }
     else fieldOk('login-email');
 
     if (!pw) { fieldErr('login-pw', 'Please enter your password.'); ok = false; }
@@ -806,7 +834,7 @@
         setLoading('login-btn', false, 'Sign in');
         return;
       }
-      saveSession(data.token);
+      saveSession(data.token, data.user?.id);
       window.location.href = 'app.html';
     } catch (_) {
       showToast('Could not reach the server. Is the backend running?', true);
@@ -843,6 +871,7 @@
 
   function skipStep(from) {
     if (from < TOTAL_STEPS) goToStep(from + 1);
+    else if (_registered) window.location.href = 'app.html';
     else handleRegister();
   }
 
@@ -882,7 +911,8 @@
         }
         return;
       }
-      saveSession(data.token);
+      _registered = true;
+      saveSession(data.token, data.user?.id);
       showToast('Welcome to Nexus!');
       setTimeout(() => { window.location.href = 'app.html'; }, 1200);
     } catch (_) {
@@ -895,7 +925,7 @@
     switch (step) {
       case 1: {
         const v = document.getElementById('s-email').value.trim();
-        if (!isValidEmailOrPhone(v)) { fieldErr('s-email', 'Please enter a valid email or phone number.'); return false; }
+        if (!isValidEmail(v)) { fieldErr('s-email', 'Please enter a valid email address.'); return false; }
         fieldOk('s-email'); return true;
       }
       case 2: {

@@ -370,11 +370,20 @@ def get_all_posts():
     result = []
     for r in rows:
         blob = json.loads(r["data"])
+        reactions = blob.get("reactions", {})
+        like_count = blob.get("totalReactions") or (sum(reactions.values()) if reactions else 0)
+        comments_list = blob.get("commentsList", [])
+        comment_count = blob.get("comments") if isinstance(blob.get("comments"), int) else len(comments_list)
         post = {
             "id": r["id"],
+            "authorId": r["author_id"],
             "content": r["content"],
+            "createdAt": r["created_at"],
             "timestamp": r["created_at"],
-            **blob,
+            "likeCount": like_count,
+            "comments": comments_list,
+            "commentCount": comment_count,
+            **{k: v for k, v in blob.items() if k not in ("commentsList", "comments")},
         }
         result.append(post)
     return result
@@ -413,7 +422,17 @@ def create_post(author_id: int, content: str):
     new_id = c.lastrowid
     conn.commit()
     conn.close()
-    return {"id": new_id, "content": content, "timestamp": now, **blob}
+    return {
+        "id": new_id,
+        "authorId": author_id,
+        "content": content,
+        "timestamp": now,
+        "createdAt": now,
+        "likeCount": 0,
+        "comments": [],
+        "commentCount": 0,
+        **{k: v for k, v in blob.items() if k not in ("commentsList", "comments")},
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -457,6 +476,10 @@ def get_all_conversations():
     for r in rows:
         meta = json.loads(r["data"])
         meta["id"] = r["id"]
+        # Flatten participantName for easy frontend access
+        if "participantName" not in meta:
+            p = meta.get("participant")
+            meta["participantName"] = p.get("name", "") if isinstance(p, dict) else ""
         result.append(meta)
     return result
 
@@ -579,8 +602,8 @@ def search(q: str, exclude_user_id: int = 1):
 
     conn = _connect()
 
-    # Users
-    user_rows = conn.execute("SELECT data FROM users WHERE id != ?", (exclude_user_id,)).fetchall()
+    # Users (search across ALL users — no exclusion, so queries like "alex" find the primary user too)
+    user_rows = conn.execute("SELECT data FROM users").fetchall()
     users = [
         json.loads(r["data"]) for r in user_rows
         if q_lower in json.loads(r["data"]).get("name", "").lower()

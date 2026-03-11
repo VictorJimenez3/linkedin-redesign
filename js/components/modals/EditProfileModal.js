@@ -6,9 +6,9 @@ function EditProfileModal() {
   const [form, setForm] = React.useState({
     firstName: currentUser ? (currentUser.name || '').split(' ')[0] : '',
     lastName: currentUser ? (currentUser.name || '').split(' ').slice(1).join(' ') : '',
-    pronouns: 'he/him',
+    pronouns: currentUser ? (currentUser.pronouns || 'he/him') : 'he/him',
     headline: currentUser ? (currentUser.headline || '') : '',
-    industry: 'Technology',
+    industry: currentUser ? (currentUser.industry || 'Technology') : 'Technology',
     location: currentUser ? (currentUser.location || '') : '',
   });
 
@@ -18,7 +18,7 @@ function EditProfileModal() {
 
   function handleSave() {
     const name = (form.firstName + ' ' + form.lastName).trim();
-    const updates = { headline: form.headline, location: form.location };
+    const updates = { headline: form.headline, location: form.location, pronouns: form.pronouns, industry: form.industry };
     if (name) updates.name = name;
     API.updateMe(updates)
       .then(updated => {

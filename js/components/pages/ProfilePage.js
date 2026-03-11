@@ -38,6 +38,11 @@ function ProfilePage({ userId }) {
     [userId]
   );
 
+  const { data: readinessData } = useFetch(
+    () => isOwnProfile ? API.getOutreachReadiness() : Promise.resolve(null),
+    [isOwnProfile]
+  );
+
   const [expandedSections, setExpandedSections] = React.useState(new Set());
   const [coverUrl, setCoverUrl] = React.useState(() => {
     try { return localStorage.getItem('li-cover-photo') || null; } catch { return null; }
@@ -373,15 +378,24 @@ function ProfilePage({ userId }) {
 
         {/* Right sidebar */}
         <div style={{ width: 280, flexShrink: 0 }}>
-          {isOwnProfile && (
-            <div className="li-card" style={{ padding: 20, marginBottom: 16 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Profile strength</h3>
-              <div style={{ height: 6, background: 'var(--bg-2)', borderRadius: 3, marginBottom: 8 }}>
-                <div style={{ height: '100%', width: '85%', background: 'var(--blue)', borderRadius: 3 }} />
+          {isOwnProfile && (() => {
+            const score = readinessData?.score ?? null;
+            const level = readinessData?.level;
+            const levelLabel = level === 'ready' ? 'All-Star' : level === 'almost_ready' ? 'Rising' : 'Getting started';
+            const barColor = score === null ? 'var(--blue)' : score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--gold-dark)' : 'var(--red)';
+            const displayScore = score ?? '—';
+            return (
+              <div className="li-card" style={{ padding: 20, marginBottom: 16 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Profile strength</h3>
+                <div style={{ height: 6, background: 'var(--bg-2)', borderRadius: 3, marginBottom: 8 }}>
+                  <div style={{ height: '100%', width: score !== null ? `${score}%` : '0%', background: barColor, borderRadius: 3, transition: 'width 0.4s ease' }} />
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
+                  {score !== null ? `${levelLabel} · ${displayScore}% complete` : 'Calculating…'}
+                </div>
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-2)' }}>All-Star · 85% complete</div>
-            </div>
-          )}
+            );
+          })()}
 
           <PeopleAlsoViewed currentUserId={userId} />
         </div>

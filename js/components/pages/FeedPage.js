@@ -194,40 +194,6 @@ function FeedPage() {
           </div>
         )}
 
-        {/* Trending hashtags */}
-        {allTags.length > 0 && (
-          <div className="li-card" style={{ padding: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-              Trending for you
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {allTags.slice(0, 10).map(tag => {
-                const label = '#' + (tag.name || tag);
-                return (
-                  <button key={label} onClick={() => navigate(`search?q=${encodeURIComponent(label)}`)}
-                    style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '4px 12px', fontSize: 12, fontWeight: 600, color: 'var(--blue)', cursor: 'pointer', transition: 'background 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#EAF4FF'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg)'}>
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div style={{ padding: '4px 0 20px', fontSize: 11, color: 'var(--text-2)', lineHeight: 2.2 }}>
-          {['About', 'Accessibility', 'Help Center', 'Privacy & Terms', 'Blog', 'Careers'].map(l => (
-            <a key={l} href="#" style={{ color: 'var(--text-2)', textDecoration: 'none', marginRight: 8 }}
-              onMouseOver={e => e.target.style.textDecoration = 'underline'}
-              onMouseOut={e => e.target.style.textDecoration = 'none'}
-              onClick={e => e.preventDefault()}>
-              {l}
-            </a>
-          ))}
-          <div style={{ marginTop: 8, color: 'var(--text-3)' }}>Nexus Corp © 2026</div>
-        </div>
       </aside>
     </div>
   );

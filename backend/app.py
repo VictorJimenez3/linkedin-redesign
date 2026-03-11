@@ -290,6 +290,7 @@ def post_message(conv_id):
     if not current_user:
         abort(500, description="Current user not found")
     msg = dbl.send_message(conv_id, sender_id=current_user["id"], text=text)
+    msg["isMe"] = True
     return jsonify(msg), 201
 
 
@@ -492,4 +493,4 @@ if __name__ == "__main__":
     print("Starting Nexus Backend on http://localhost:5000")
     print("App: http://localhost:5000/")
     print("API: http://localhost:5000/api/")
-    app.run(debug=True, port=5000, threaded=True)
+    app.run(debug=False, port=5000, threaded=True)

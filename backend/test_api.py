@@ -58,7 +58,7 @@ passed = failed = 0
 def ok(name, status, body, checks):
     global passed, failed
     errors = []
-    if status not in (200, 201):
+    if not (200 <= status < 300):
         errors.append(f"expected 2xx, got {status}  body={body}")
     for desc, result in checks:
         if not result:
@@ -342,9 +342,7 @@ if _new_user_id:
 
 # Cannot delete current user (id=1)
 s, b = delete("/users/1")
-ok("DELETE /users/1  forbidden -> 403", s, b, [
-    ("status 403", s == 403),
-])
+err("DELETE /users/1  forbidden -> 403", s, b, 403, "cannot_delete_primary_user")
 
 # Cannot delete non-existent user
 s, b = delete("/users/9999")

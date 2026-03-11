@@ -408,20 +408,19 @@ function MessagingPage() {
               className="li-btn li-btn--ghost"
               onClick={openOutreachGuide}
               disabled={!selectedId}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              title="Outreach Guide"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+              title="User Story 1 — Get a personalised outreach draft"
             >
-              Guide
+              ✍️ Outreach Guide
             </button>
 
             <button
               className="li-btn li-btn--ghost"
               onClick={openProfileReadiness}
-              disabled={!selectedId}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              title="Profile Readiness"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+              title="User Story 7 — Check how ready your profile is before messaging"
             >
-              Score
+              📊 Readiness Score
             </button>
           </div>
 
@@ -679,8 +678,9 @@ function ProfileReadinessPanel({ readiness, loading, error, onClose, onRefresh }
   const s = readiness;
 
   const score = s?.score ?? 0;
-  const status = score >= 80 ? 'good' : score >= 70 ? 'warn' : 'bad';
-  const statusLabel = score >= 80 ? 'Ready' : score >= 70 ? 'Almost there' : 'Needs improvement';
+  const canMessage = s?.can_message ?? (score >= 60);
+  const status = score >= 75 ? 'good' : score >= 50 ? 'warn' : 'bad';
+  const statusLabel = score >= 75 ? 'Ready to reach out' : score >= 50 ? 'Almost ready' : 'Needs improvement';
 
   // Ring math
   const r = 44;
@@ -780,7 +780,9 @@ function ProfileReadinessPanel({ readiness, loading, error, onClose, onRefresh }
                 </div>
 
                 <div className="li-msg-score__note">
-                  You can message now — but these fixes usually boost response rates.
+                  {canMessage
+                    ? 'Your profile is ready to message — these fixes will boost reply rates.'
+                    : 'Complete these items (score ≥ 60) to unlock outreach messaging.'}
                 </div>
               </div>
             </div>

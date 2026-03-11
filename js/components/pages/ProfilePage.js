@@ -56,6 +56,7 @@ function ProfilePage({ userId }) {
   const isPending = pendingConnections.has(String(user.id));
   const isConnected = connections.has(String(user.id));
   const isFollowing = following.has(String(user.id));
+  const [coverUrl, setCoverUrl] = React.useState(null);
 
   return (
     <div className="li-page-inner">
@@ -66,7 +67,7 @@ function ProfilePage({ userId }) {
           {/* Hero card */}
           <div className="li-card" style={{ padding: 0, overflow: 'hidden' }}>
             {/* Cover photo */}
-            <div style={{ height: 200, background: 'linear-gradient(135deg, #0F5DBD 0%, #0A4A9E 100%)', position: 'relative' }}>
+            <div style={{ height: 200, background: coverUrl ? `url(${coverUrl}) center/cover no-repeat` : (user.coverGradient || 'linear-gradient(135deg, #0F5DBD 0%, #0A4A9E 100%)'), position: 'relative' }}>
               {isOwnProfile && (
                 <button
                   style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.3)', border: 'none', borderRadius: 4, padding: '6px 10px', color: '#fff', cursor: 'pointer', fontSize: 12 }}
@@ -74,7 +75,16 @@ function ProfilePage({ userId }) {
                     const input = document.createElement('input');
                     input.type = 'file';
                     input.accept = 'image/*';
-                    input.onchange = () => showToast('Cover photo updated!', 'success');
+                    input.onchange = (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        setCoverUrl(ev.target.result);
+                        showToast('Cover photo updated!', 'success');
+                      };
+                      reader.readAsDataURL(file);
+                    };
                     input.click();
                   }}
                 >

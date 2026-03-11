@@ -329,7 +329,7 @@ function MessagingPage() {
 
   const allConversations = conversations || [];
   const filteredConvs = search
-    ? allConversations.filter(c => (c.participantName || '').toLowerCase().includes(search.toLowerCase()))
+    ? allConversations.filter(c => (c.participant?.name || c.participantName || '').toLowerCase().includes(search.toLowerCase()))
     : allConversations;
   const selectedConv = allConversations.find(c => c.id === selectedId);
 
@@ -384,7 +384,7 @@ function MessagingPage() {
                   borderBottom: '1px solid rgba(0,0,0,0.06)',
                 }}
               >
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{c.participantName || 'Unknown'}</div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{c.participant?.name || c.participantName || 'Unknown'}</div>
                 <div style={{ color: 'var(--text-3)', fontSize: 12, marginTop: 2 }}>{c.lastMessage || ''}</div>
               </button>
             ))}
@@ -396,7 +396,7 @@ function MessagingPage() {
           {/* Chat header */}
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ fontWeight: 800, fontSize: 15 }}>
-              {selectedConv ? (selectedConv.participantName || 'Conversation') : 'Select a conversation'}
+              {selectedConv ? (selectedConv.participant?.name || selectedConv.participantName || 'Conversation') : 'Select a conversation'}
             </div>
             <div style={{ flex: 1 }} />
 

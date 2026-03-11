@@ -6,6 +6,7 @@ function NetworkPage() {
   const { data: users, loading: usersLoading } = useFetch(API.getUsers, []);
   const { data: invitations, loading: invitesLoading } = useFetch(API.getInvitations, []);
   const [tab, setTab] = React.useState('suggestions');
+  const [dismissedInvitations, setDismissedInvitations] = React.useState(new Set());
 
   const loading = usersLoading || invitesLoading;
   if (loading) return <LoadingSpinner text="Loading network..." />;
@@ -28,7 +29,7 @@ function NetworkPage() {
                 </button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {allInvitations.slice(0, 3).map((inv, i) => {
+                {allInvitations.slice(0, 3).filter((_, i) => !dismissedInvitations.has(i)).map((inv, i) => {
                   const invUser = inv.user || inv;
                   const invName = invUser.name || inv.senderName || 'Unknown';
                   const invHeadline = invUser.headline || inv.headline || inv.title || '';
@@ -41,8 +42,14 @@ function NetworkPage() {
                         <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{inv.mutualCount || inv.mutualConnections || 0} mutual connections</div>
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => showToast('Invitation ignored')}>Ignore</button>
-                        <button className="li-btn li-btn--outline li-btn--sm" onClick={() => showToast(`Connected with ${invName}!`)}>Accept</button>
+                        <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => {
+                          setDismissedInvitations(prev => new Set([...prev, i]));
+                          showToast('Invitation ignored');
+                        }}>Ignore</button>
+                        <button className="li-btn li-btn--outline li-btn--sm" onClick={() => {
+                          setDismissedInvitations(prev => new Set([...prev, i]));
+                          showToast(`Connected with ${invName}!`);
+                        }}>Accept</button>
                       </div>
                     </div>
                   );

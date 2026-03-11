@@ -11,6 +11,7 @@ import json
 import time
 import os
 import hashlib
+import secrets
 
 # ---------------------------------------------------------------------------
 # Config
@@ -24,6 +25,10 @@ def _connect():
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
+
+
+# In-memory session store: token -> user_id
+_sessions: dict = {}
 
 
 def _ts():
@@ -174,6 +179,15 @@ def init_db():
                 VALUES (?, ?, ?)
             """, (n["id"], 1 if n.get("isRead") else 0, json.dumps(n)))
 
+    # -- Sessions -------------------------------------------------------------
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS sessions (
+            token   TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            created_at INTEGER NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -196,29 +210,74 @@ def _upsert_user(c, uid, name, email, pw_hash, data_dict):
 # ---------------------------------------------------------------------------
 # User functions
 # ---------------------------------------------------------------------------
-def get_current_user():
-    """Return the logged-in user (always id=1 in this demo)."""
-    return get_user_by_id(1)
-
-
-def update_current_user(updates: dict):
-    """Update allowed fields on the current user (id=1). Returns updated user dict."""
+def verify_credentials(email: str, password: str):
+    """Check email+password. Returns user dict on success, None on failure."""
     conn = _connect()
-    row = conn.execute("SELECT data FROM users WHERE id=1").fetchone()
+    row = conn.execute(
+        "SELECT id, pw_hash, data FROM users WHERE email=?", (email.lower(),)
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    if row["pw_hash"] != _hash_pw(password):
+        return None
+    return json.loads(row["data"])
+
+
+def create_session(user_id: int) -> str:
+    """Generate a session token for the user and persist it."""
+    token = secrets.token_hex(32)
+    _sessions[token] = user_id
+    conn = _connect()
+    conn.execute(
+        "INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",
+        (token, user_id, _ts()),
+    )
+    conn.commit()
+    conn.close()
+    return token
+
+
+def get_session_user_id(token: str):
+    """Look up user_id from a session token. Returns None if invalid."""
+    if not token:
+        return None
+    # Fast in-memory lookup first
+    if token in _sessions:
+        return _sessions[token]
+    # Fall back to DB (e.g. after server restart)
+    conn = _connect()
+    row = conn.execute(
+        "SELECT user_id FROM sessions WHERE token=?", (token,)
+    ).fetchone()
+    conn.close()
+    if row:
+        _sessions[token] = row["user_id"]
+        return row["user_id"]
+    return None
+
+
+def get_current_user(user_id: int = 1):
+    """Return a user by id (defaults to id=1 for backward compat)."""
+    return get_user_by_id(user_id)
+
+
+def update_current_user(updates: dict, user_id: int = 1):
+    """Update allowed fields on a user. Returns updated user dict."""
+    conn = _connect()
+    row = conn.execute("SELECT data FROM users WHERE id=?", (user_id,)).fetchone()
     if not row:
         conn.close()
         return None
     data = json.loads(row["data"])
-    # Map API field names → data blob keys
     field_map = {"name": "name", "headline": "headline", "location": "location",
                  "about": "about", "pronouns": "pronouns", "industry": "industry"}
     for key, val in updates.items():
         if key in field_map:
             data[field_map[key]] = val
-    # Also update top-level name column if name changed
     name_val = data.get("name", "")
-    conn.execute("UPDATE users SET name=?, data=? WHERE id=1",
-                 (name_val, json.dumps(data)))
+    conn.execute("UPDATE users SET name=?, data=? WHERE id=?",
+                 (name_val, json.dumps(data), user_id))
     conn.commit()
     conn.close()
     return data

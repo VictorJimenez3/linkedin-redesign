@@ -6,11 +6,15 @@
 (function () {
   const BASE = 'http://localhost:5000/api';
 
+  function getToken() {
+    try { return localStorage.getItem('nx-token') || ''; } catch { return ''; }
+  }
+
   async function request(method, path, body) {
-    const opts = {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-    };
+    const headers = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const opts = { method, headers };
     if (body !== undefined) {
       opts.body = JSON.stringify(body);
     }
@@ -84,6 +88,8 @@
       request('GET', userId ? `/outreach/readiness?userId=${encodeURIComponent(userId)}` : '/outreach/readiness'),
 
     // ── Account ───────────────────────────────────────────────
+    login: (email, password) =>
+      request('POST', '/auth/login', { email, password }),
     register: (name, email, password) =>
       request('POST', '/auth/register', { name, email, password }),
     deleteUser: (id) =>

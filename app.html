@@ -43,6 +43,16 @@
 <!-- API utility (plain JS, no JSX) -->
 <script src="js/api.js"></script>
 
+<!-- Auth guard: redirect to login if no session token stored -->
+<script>
+  (function() {
+    try {
+      const token = localStorage.getItem('nx-token');
+      if (!token) { window.location.href = 'index.html'; }
+    } catch(_) {}
+  })();
+</script>
+
 <!-- ── Shared utilities & context ──────────────────────────── -->
 <script type="text/babel" src="js/components/utils.js"></script>
 <script type="text/babel" src="js/components/AppContext.js"></script>

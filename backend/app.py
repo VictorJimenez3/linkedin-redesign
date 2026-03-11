@@ -37,6 +37,18 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 dbl.init_db()
 
 
+def _auth_user():
+    """
+    Extract and validate the session token from the Authorization header.
+    Returns the user dict, or user id=1 as fallback for unauthenticated requests
+    (preserves backward compatibility when the app is opened without logging in).
+    """
+    auth = request.headers.get("Authorization", "")
+    token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
+    uid = dbl.get_session_user_id(token) if token else None
+    return dbl.get_current_user(uid if uid else 1)
+
+
 # ── Serve SPA ─────────────────────────────────────────────────
 
 @app.route("/")
@@ -56,6 +68,11 @@ def bad_request(e):
     return jsonify({"error": str(e)}), 400
 
 
+@app.errorhandler(401)
+def unauthorized(e):
+    return jsonify({"error": str(e)}), 401
+
+
 @app.errorhandler(409)
 def conflict(e):
     return jsonify({"error": str(e)}), 409
@@ -64,6 +81,28 @@ def conflict(e):
 # ══════════════════════════════════════════════════════════════
 # Auth / Account Endpoints
 # ══════════════════════════════════════════════════════════════
+
+@app.route("/api/auth/login", methods=["POST"])
+def login():
+    """
+    POST /api/auth/login — authenticate an existing user.
+    Body: { email, password }
+    Returns { user, token } on success or 401 on failure.
+    """
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+    password = body.get("password") or ""
+
+    if not email or not password:
+        abort(400, description="email and password are required")
+
+    user = dbl.verify_credentials(email, password)
+    if not user:
+        abort(401, description="Invalid email or password")
+
+    token = dbl.create_session(user["id"])
+    return jsonify({"user": user, "token": token}), 200
+
 
 @app.route("/api/auth/register", methods=["POST"])
 def register():
@@ -90,7 +129,8 @@ def register():
     except ValueError as exc:
         abort(409, description=str(exc))
 
-    return jsonify(user), 201
+    token = dbl.create_session(user["id"])
+    return jsonify({"user": user, "token": token}), 201
 
 
 # ══════════════════════════════════════════════════════════════
@@ -100,7 +140,7 @@ def register():
 @app.route("/api/me")
 def get_me():
     """GET /api/me — current logged-in user profile."""
-    user = dbl.get_current_user()
+    user = _auth_user()
     if not user:
         abort(404, description="Current user not found")
     return jsonify(user)
@@ -114,7 +154,10 @@ def update_me():
     updates = {k: v for k, v in body.items() if k in allowed and isinstance(v, str)}
     if not updates:
         abort(400, description="No valid fields to update")
-    updated = dbl.update_current_user(updates)
+    current_user = _auth_user()
+    if not current_user:
+        abort(401, description="Not authenticated")
+    updated = dbl.update_current_user(updates, current_user["id"])
     if not updated:
         abort(404, description="Current user not found")
     return jsonify(updated)
@@ -170,7 +213,7 @@ def create_post():
     if not content:
         abort(400, description="content is required and must not be empty")
 
-    current_user = dbl.get_current_user()
+    current_user = _auth_user()
     if not current_user:
         abort(500, description="Current user not found")
 
@@ -242,7 +285,7 @@ def post_message(conv_id):
     if not text:
         abort(400, description="text is required")
 
-    current_user = dbl.get_current_user()
+    current_user = _auth_user()
     if not current_user:
         abort(500, description="Current user not found")
     msg = dbl.send_message(conv_id, sender_id=current_user["id"], text=text)
@@ -337,7 +380,7 @@ def search():
 @app.route("/api/profile-readiness")
 def get_profile_readiness():
     """GET /api/profile-readiness — compute profile completeness score."""
-    u = dbl.get_current_user()
+    u = _auth_user()
 
     headline_len = len((u.get("headline") or "").strip())
     about_len    = len((u.get("about") or "").strip())
@@ -408,7 +451,7 @@ def outreach_generate():
     details = {k: outreach_mod.sanitize_text(str(v), 100) for k, v in raw_details.items() if isinstance(v, str) and k in {"recipient", "yourRole", "field", "company", "role", "context"}}
     context = {"tone": tone, "goal": goal, "custom_note": custom_note, "details": details}
 
-    current_user = dbl.get_current_user()
+    current_user = _auth_user()
     result = outreach_mod.generate_outreach_message(
         current_user,
         recipient,
@@ -438,7 +481,7 @@ def outreach_readiness():
         if not user:
             abort(404, description=f"User {user_id} not found")
     else:
-        user = dbl.get_current_user()
+        user = _auth_user()
 
     return jsonify(outreach_mod.compute_outreach_readiness(user)), 200
 

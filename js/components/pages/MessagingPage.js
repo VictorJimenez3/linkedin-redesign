@@ -356,18 +356,8 @@ function MessagingPage() {
         <div style={{ width: 320, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           {/* Header */}
           <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700 }}>Messaging</h2>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button className="li-btn li-btn--ghost" style={{ padding: 4 }}
-                  onClick={() => showToast('New message — coming soon')}>
-                  Write
-                </button>
-                <button className="li-btn li-btn--ghost" style={{ padding: 4 }}
-                  onClick={() => showToast('Settings — coming soon')}>
-                  Settings
-                </button>
-              </div>
             </div>
 
             {/* Search */}

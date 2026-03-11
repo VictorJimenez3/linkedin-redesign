@@ -39,6 +39,7 @@ function ProfilePage({ userId }) {
   );
 
   const [expandedSections, setExpandedSections] = React.useState(new Set());
+  const [coverUrl, setCoverUrl] = React.useState(null);
 
   function toggleSection(key) {
     setExpandedSections(prev => {
@@ -56,7 +57,6 @@ function ProfilePage({ userId }) {
   const isPending = pendingConnections.has(String(user.id));
   const isConnected = connections.has(String(user.id));
   const isFollowing = following.has(String(user.id));
-  const [coverUrl, setCoverUrl] = React.useState(null);
 
   return (
     <div className="li-page-inner">

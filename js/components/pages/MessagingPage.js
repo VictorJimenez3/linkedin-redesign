@@ -50,7 +50,12 @@ function MessagingPage() {
     setMsgLoading(true);
     API.getConversation(id)
       .then(data => {
-        setMessages(data.messages || []);
+        const myId = currentUser?.id;
+        const msgs = (data.messages || []).map(m => ({
+          ...m,
+          isMe: m.isMe || (myId != null && String(m.senderId) === String(myId)),
+        }));
+        setMessages(msgs);
         setMsgLoading(false);
       })
       .catch(() => {

@@ -892,7 +892,7 @@ const _OUTREACH_TIPS = {
   ],
   referral: [
     'Ask only after showing fit (skill/project).',
-    “Make it easy: \u201CIf you're open to referring\u2026\u201D”,
+    "Make it easy: if you're open to referring.",
     'Respect a “no” and thank them anyway.',
   ],
 };

@@ -201,6 +201,29 @@ def get_current_user():
     return get_user_by_id(1)
 
 
+def update_current_user(updates: dict):
+    """Update allowed fields on the current user (id=1). Returns updated user dict."""
+    conn = _connect()
+    row = conn.execute("SELECT data FROM users WHERE id=1").fetchone()
+    if not row:
+        conn.close()
+        return None
+    data = json.loads(row["data"])
+    # Map API field names → data blob keys
+    field_map = {"name": "name", "headline": "headline", "location": "location",
+                 "about": "about", "pronouns": "pronouns", "industry": "industry"}
+    for key, val in updates.items():
+        if key in field_map:
+            data[field_map[key]] = val
+    # Also update top-level name column if name changed
+    name_val = data.get("name", "")
+    conn.execute("UPDATE users SET name=?, data=? WHERE id=1",
+                 (name_val, json.dumps(data)))
+    conn.commit()
+    conn.close()
+    return data
+
+
 def get_all_users():
     conn = _connect()
     rows = conn.execute("SELECT data FROM users WHERE id != 1").fetchall()

@@ -14,6 +14,8 @@ function MessagingPage() {
   const [draft, setDraft] = React.useState('');
   const [search, setSearch] = React.useState('');
   const messagesEndRef = React.useRef(null);
+  const currentUserRef = React.useRef(currentUser);
+  React.useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
 
   // Panels (user stories live in Messaging like your original requirement)
   const [activePanel, setActivePanel] = React.useState(null); // 'guide' | 'score' | null
@@ -50,10 +52,10 @@ function MessagingPage() {
     setMsgLoading(true);
     API.getConversation(id)
       .then(data => {
-        const myId = currentUser?.id;
+        const myId = currentUserRef.current?.id;
         const msgs = (data.messages || []).map(m => ({
           ...m,
-          isMe: m.isMe || (myId != null && String(m.senderId) === String(myId)),
+          isMe: myId != null && String(m.senderId) === String(myId),
         }));
         setMessages(msgs);
         setMsgLoading(false);
@@ -244,6 +246,11 @@ function MessagingPage() {
 
       const conv = (conversations || []).find(c => c.id === selectedId);
       const recipientId = conv?.participant?.id ?? null;
+      if (!recipientId) {
+        setGuideState({ generating: false, step: 2, backendVariants: [] });
+        showToast('Could not identify recipient — try again', 'error');
+        return;
+      }
 
       API.generateOutreachMessage(recipientId, mapping.tone, mapping.goal, customNote)
         .then(data => {

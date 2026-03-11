@@ -31,6 +31,7 @@
   window.API = {
     // ── User ─────────────────────────────────────────────────
     getMe: () => request('GET', '/me'),
+    updateMe: (updates) => request('PUT', '/me', updates),
     getUsers: () => request('GET', '/users'),
     getUser: (id) => request('GET', `/users/${id}`),
 

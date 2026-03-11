@@ -106,6 +106,20 @@ def get_me():
     return jsonify(user)
 
 
+@app.route("/api/me", methods=["PUT", "PATCH"])
+def update_me():
+    """PUT /api/me — update current user profile fields."""
+    body = request.get_json(silent=True) or {}
+    allowed = {"name", "headline", "location", "about", "pronouns", "industry"}
+    updates = {k: v for k, v in body.items() if k in allowed and isinstance(v, str)}
+    if not updates:
+        abort(400, description="No valid fields to update")
+    updated = dbl.update_current_user(updates)
+    if not updated:
+        abort(404, description="Current user not found")
+    return jsonify(updated)
+
+
 @app.route("/api/users")
 def get_users():
     """GET /api/users — all users in the network (excludes current user)."""
@@ -429,4 +443,4 @@ if __name__ == "__main__":
     print("Starting Nexus Backend on http://localhost:5000")
     print("App: http://localhost:5000/")
     print("API: http://localhost:5000/api/")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000, threaded=True)

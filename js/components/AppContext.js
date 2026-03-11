@@ -152,6 +152,7 @@ function AppProvider({ children }) {
     modalData,
     // Toasts
     toasts,
+    setCurrentUser,
     // Actions
     toggleLike,
     toggleSaveJob,

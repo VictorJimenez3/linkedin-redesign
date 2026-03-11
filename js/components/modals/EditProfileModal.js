@@ -2,7 +2,7 @@
    EDITPROFILEMODAL.JS — Edit profile intro
    ============================================================ */
 function EditProfileModal() {
-  const { closeModal, currentUser, showToast } = React.useContext(AppContext);
+  const { closeModal, currentUser, setCurrentUser, showToast } = React.useContext(AppContext);
   const [form, setForm] = React.useState({
     firstName: currentUser ? (currentUser.name || '').split(' ')[0] : '',
     lastName: currentUser ? (currentUser.name || '').split(' ').slice(1).join(' ') : '',
@@ -17,8 +17,18 @@ function EditProfileModal() {
   }
 
   function handleSave() {
-    showToast('Profile updated!');
-    closeModal();
+    const name = (form.firstName + ' ' + form.lastName).trim();
+    const updates = { headline: form.headline, location: form.location };
+    if (name) updates.name = name;
+    API.updateMe(updates)
+      .then(updated => {
+        setCurrentUser(updated);
+        showToast('Profile updated!', 'success');
+        closeModal();
+      })
+      .catch(() => {
+        showToast('Failed to save changes', 'error');
+      });
   }
 
   return (

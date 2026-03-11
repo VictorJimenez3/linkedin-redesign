@@ -97,19 +97,46 @@ function MessagingPage() {
     setReadinessLoading(true);
     setReadinessError(null);
     try {
-      // Backend call (P4-ready)
-      const data = await API.getProfileReadiness();
-      setReadiness(data);
-      if (refresh) showToast('Score refreshed', 'success');
-    } catch (e) {
-      // Fallback mock so P3 works even if backend isn’t running
-      const mock = mockBackendGetProfileReadiness(currentUser, { jitter: refresh });
-      setReadiness(mock);
-      setReadinessError('Backend not running — using mocked score');
-      if (refresh) showToast('Score refreshed (mock)', 'info');
+      // Story #7 — primary: outreach readiness endpoint
+      const data = await API.getOutreachReadiness();
+      setReadiness(_transformOutreachReadiness(data));
+      if (refresh) showToast(‘Score refreshed’, ‘success’);
+    } catch (_e1) {
+      try {
+        // Secondary fallback: profile-readiness endpoint
+        const data = await API.getProfileReadiness();
+        setReadiness(data);
+        if (refresh) showToast(‘Score refreshed’, ‘success’);
+      } catch (_e2) {
+        // Final fallback: local mock
+        const mock = mockBackendGetProfileReadiness(currentUser, { jitter: refresh });
+        setReadiness(mock);
+        setReadinessError(‘Backend not running — using mocked score’);
+        if (refresh) showToast(‘Score refreshed (mock)’, ‘info’);
+      }
     } finally {
       setReadinessLoading(false);
     }
+  }
+
+  function _transformOutreachReadiness(data) {
+    const sections = (data.breakdown || []).map(item => ({
+      key: item.key,
+      label: item.label,
+      score: item.met ? 100 : 0,
+    }));
+    const fixes = (data.breakdown || []).map(item => ({
+      key: item.key,
+      label: item.tip || item.label,
+      status: item.met ? ‘done’ : (item.weight >= 15 ? ‘bad’ : ‘warn’),
+    }));
+    return {
+      score: data.score,
+      sections,
+      fixes,
+      level: data.level,
+      can_message: data.can_message,
+    };
   }
 
   // ────────────────────────────────────────────────────────────
@@ -130,6 +157,10 @@ function MessagingPage() {
           step: 1,
           goal: null,
           variantIdx: 0,
+          generating: false,
+          backendVariants: [],   // [draft, ...alternatives] from API
+          backendTips: null,     // tips[] from API
+          backendTone: null,     // tone string from API
           details: {
             recipient: '',
             yourRole: '',
@@ -198,9 +229,34 @@ function MessagingPage() {
     }
 
     if (s.step === 2) {
-      const updated = { ...s, step: 3 };
-      updated.preview = computeGuidePreview(updated);
-      setGuideState(updated);
+      // Move to step 3 immediately (show loading), then fetch from backend
+      setGuideState({ step: 3, generating: true, preview: '', backendVariants: [], backendTips: null, backendTone: null });
+
+      const mapping = _GOAL_BACKEND_MAP[s.goal] || { goal: 'networking', tone: 'professional' };
+      const d = s.details || {};
+      const noteParts = [d.company, d.role, d.context].filter(Boolean);
+      const customNote = noteParts.join(' — ');
+
+      const conv = (conversations || []).find(c => c.id === selectedId);
+      const recipientId = conv?.participant?.id ?? null;
+
+      API.generateOutreachMessage(recipientId, mapping.tone, mapping.goal, customNote)
+        .then(data => {
+          const variants = [data.draft, ...(data.alternatives || [])].filter(Boolean);
+          setGuideState({
+            generating: false,
+            preview: variants[0] || '',
+            backendVariants: variants,
+            backendTips: data.tips || null,
+            backendTone: data.tone || null,
+            variantIdx: 0,
+          });
+        })
+        .catch(() => {
+          // Fallback to local template
+          const fallback = computeGuidePreview({ ...s, step: 3 });
+          setGuideState({ generating: false, preview: fallback, backendVariants: [] });
+        });
       return;
     }
   }
@@ -214,9 +270,16 @@ function MessagingPage() {
   function cycleVariant() {
     const s = guideStateByConv[selectedId];
     if (!s || !s.goal) return;
+
+    if (s.backendVariants && s.backendVariants.length > 1) {
+      const nextIdx = (s.variantIdx + 1) % s.backendVariants.length;
+      setGuideState({ variantIdx: nextIdx, preview: s.backendVariants[nextIdx] });
+      return;
+    }
+
+    // Fallback: local templates
     const variants = _OUTREACH_TEMPLATES[s.goal] || [];
     if (!variants.length) return;
-
     const updated = { ...s, variantIdx: (s.variantIdx + 1) % variants.length };
     updated.preview = computeGuidePreview(updated);
     setGuideState(updated);
@@ -241,21 +304,21 @@ function MessagingPage() {
     setActivePanel(null);
   }
 
-  // Keep preview synced when details change (when in step 2/3)
+  // Keep preview synced when details change (local-template mode only — not when using backend)
   React.useEffect(() => {
     if (!selectedId) return;
     const s = guideStateByConv[selectedId];
     if (!s) return;
     if (!s.goal) return;
+    // Don’t touch preview when backend has generated content or is generating
+    if (s.backendVariants?.length > 0 || s.generating) return;
     if (s.step === 2 || s.step === 3) {
-      const fresh = computeGuidePreview(s);
-      // Only overwrite preview automatically if user hasn’t manually edited it heavily
-      // (Simple rule: if preview still matches computed prefix-ish)
       setGuideStateByConv(prev => {
         const cur = prev[selectedId];
         if (!cur) return prev;
+        if (cur.backendVariants?.length > 0 || cur.generating) return prev;
         const computed = computeGuidePreview(cur);
-        // If user edited, keep their version
+        // If user manually edited in step 3, keep their version
         if (cur.step === 3 && cur.preview && cur.preview !== computed) return prev;
         return { ...prev, [selectedId]: { ...cur, preview: computed } };
       });
@@ -461,11 +524,21 @@ function OutreachGuidePanel({
 }) {
   if (!state) return null;
 
-  const tips = state.goal ? (_OUTREACH_TIPS[state.goal] || []) : [];
+  // Tips: prefer backend-sourced tips, fall back to local lookup
+  const tips = state.goal
+    ? (state.backendTips || _OUTREACH_TIPS[state.goal] || [])
+    : [];
 
-  const variants = state.goal ? (_OUTREACH_TEMPLATES[state.goal] || []) : [];
-  const tone = variants.length ? variants[state.variantIdx % variants.length].tone : '—';
-  const variantLabel = variants.length ? `v${state.variantIdx + 1} of ${variants.length}` : '';
+  // Tone + variant label
+  const localVariants = state.goal ? (_OUTREACH_TEMPLATES[state.goal] || []) : [];
+  const usingBackend = state.backendVariants && state.backendVariants.length > 0;
+  const totalVariants = usingBackend ? state.backendVariants.length : localVariants.length;
+  const tone = usingBackend
+    ? (state.backendTone || 'professional')
+    : (localVariants.length ? localVariants[state.variantIdx % localVariants.length].tone : '—');
+  const variantLabel = totalVariants > 1
+    ? `v${(state.variantIdx % totalVariants) + 1} of ${totalVariants}`
+    : '';
 
   return (
     <div className="li-msg-guide" role="complementary" aria-label="Outreach message guide">
@@ -526,23 +599,36 @@ function OutreachGuidePanel({
             <div className="li-msg-guide__step">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
                 <div className="li-msg-guide__step-label" style={{ margin: 0 }}>Review & edit your message</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="li-msg-guide__tone-badge">{tone}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{variantLabel}</span>
-                  <button className="li-msg-guide__cycle-btn" onClick={onCycle} title="Try another version">Try another</button>
-                </div>
+                {!state.generating && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="li-msg-guide__tone-badge">{tone}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{variantLabel}</span>
+                    {totalVariants > 1 && (
+                      <button className="li-msg-guide__cycle-btn" onClick={onCycle} title="Try another version">Try another</button>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <textarea
-                className="li-msg-guide__preview"
-                value={state.preview || ''}
-                onChange={(e) => onPreviewChange(e.target.value)}
-                rows={6}
-                placeholder="Your message will appear here…"
-              />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                <button className="li-msg-guide__insert-btn" onClick={onInsert}>Use this message →</button>
-              </div>
+              {state.generating ? (
+                <div style={{ padding: '28px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+                  <div style={{ marginBottom: 8, fontSize: 20 }}>✍️</div>
+                  Generating your message…
+                </div>
+              ) : (
+                <>
+                  <textarea
+                    className="li-msg-guide__preview"
+                    value={state.preview || ''}
+                    onChange={(e) => onPreviewChange(e.target.value)}
+                    rows={6}
+                    placeholder="Your message will appear here…"
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                    <button className="li-msg-guide__insert-btn" onClick={onInsert}>Use this message →</button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -754,7 +840,20 @@ function mockBackendGetProfileReadiness(user, opts = {}) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Outreach guide templates (from your old app.js)
+   Backend goal/tone mapping (Story #1)
+   Maps frontend goal keys → backend goal enum + tone enum
+   ───────────────────────────────────────────────────────────── */
+const _GOAL_BACKEND_MAP = {
+  advice:   { goal: 'advice',       tone: 'friendly'      },
+  job:      { goal: 'job_inquiry',  tone: 'professional'  },
+  network:  { goal: 'networking',   tone: 'friendly'      },
+  mentor:   { goal: 'advice',       tone: 'friendly'      },
+  followup: { goal: 'networking',   tone: 'professional'  },
+  referral: { goal: 'job_inquiry',  tone: 'formal'        },
+};
+
+/* ─────────────────────────────────────────────────────────────
+   Outreach guide templates (local fallback)
    ───────────────────────────────────────────────────────────── */
 const _OUTREACH_GOALS = [
   { key: 'advice',   icon: '', label: 'Ask for Advice',   desc: 'Career guidance from a pro' },

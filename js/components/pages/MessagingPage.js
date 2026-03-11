@@ -871,14 +871,14 @@ const _OUTREACH_TIPS = {
     'End with an easy yes/no question.',
   ],
   job: [
-    'Mention the role + why you're excited (1 line).',
+    "Mention the role + why you're excited (1 line).",
     'Add a quick signal (project/skill) to show fit.',
     'Ask for next step: “open to a quick chat?”',
   ],
   network: [
     'Be specific about why you reached out.',
     'Reference something from their profile if possible.',
-    'Don't ask for too much — ask to connect first.',
+    "Don't ask for too much — ask to connect first.",
   ],
   mentor: [
     'Be respectful with time (20 minutes).',
@@ -892,7 +892,7 @@ const _OUTREACH_TIPS = {
   ],
   referral: [
     'Ask only after showing fit (skill/project).',
-    'Make it easy: “If you're open to referring…”',
+    “Make it easy: \u201CIf you're open to referring\u2026\u201D”,
     'Respect a “no” and thank them anyway.',
   ],
 };

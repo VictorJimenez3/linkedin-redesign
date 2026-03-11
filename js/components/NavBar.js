@@ -31,7 +31,6 @@ function NavBar() {
     function onKeyDown(e) {
       if (e.key === 'Escape') {
         setMeOpen(false);
-        setWorkOpen(false);
         setShowSuggestions(false);
         setActiveIndex(-1);
       }

@@ -781,6 +781,8 @@
   }
 
   function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
+  function isValidPhone(v) { return /^[\d\s\-().+]{7,15}$/.test(v); }
+  function isValidEmailOrPhone(v) { return isValidEmail(v) || isValidPhone(v); }
   function isStrongPassword(v) { return v.length >= 8 && /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(v); }
 
   function fieldErr(inputId, msg) {
@@ -912,7 +914,7 @@
     switch (step) {
       case 1: {
         const v = document.getElementById('s-email').value.trim();
-        if (!isValidEmail(v)) { fieldErr('s-email', 'Please enter a valid email address.'); return false; }
+        if (!isValidEmailOrPhone(v)) { fieldErr('s-email', 'Please enter a valid email or phone number.'); return false; }
         fieldOk('s-email'); return true;
       }
       case 2: {

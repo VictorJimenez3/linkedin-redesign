@@ -23,6 +23,9 @@ function AppProvider({ children }) {
   const [appliedJobs, setAppliedJobs] = React.useState(() => {
     try { const s = localStorage.getItem('li-applied-jobs'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
   });
+  const [joinedGroups, setJoinedGroups] = React.useState(() => {
+    try { const s = localStorage.getItem('li-joined-groups'); return s ? new Set(JSON.parse(s)) : new Set([1, 2, 4]); } catch { return new Set([1, 2, 4]); }
+  });
   const [unreadMessages, setUnreadMessages] = React.useState(0);
   const [unreadNotifications, setUnreadNotifications] = React.useState(0);
 
@@ -134,6 +137,23 @@ function AppProvider({ children }) {
     setFollowing(prev => new Set([...prev, String(userId)]));
   }
 
+  function joinGroup(groupId) {
+    setJoinedGroups(prev => {
+      const next = new Set([...prev, groupId]);
+      try { localStorage.setItem('li-joined-groups', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
+  function leaveGroup(groupId) {
+    setJoinedGroups(prev => {
+      const next = new Set(prev);
+      next.delete(groupId);
+      try { localStorage.setItem('li-joined-groups', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
   function openModal(name, data) {
     setActiveModal(name);
     setModalData(data || null);
@@ -179,6 +199,9 @@ function AppProvider({ children }) {
     dismissInvitation,
     appliedJobs,
     applyJob,
+    joinedGroups,
+    joinGroup,
+    leaveGroup,
     // Actions
     toggleLike,
     toggleSaveJob,

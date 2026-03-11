@@ -2,18 +2,10 @@
    GROUPSPAGE.JS — Groups listing
    ============================================================ */
 function GroupsPage() {
-  const { showToast } = React.useContext(AppContext);
+  const { showToast, joinedGroups, joinGroup, leaveGroup } = React.useContext(AppContext);
   const { data: groups, loading, error } = useFetch(API.getGroups, []);
   const [tab, setTab] = React.useState('my-groups');
-  const [joined, setJoined] = React.useState(() => new Set([1, 2, 4]));
-
-  // Seed joined from API data on first load
-  React.useEffect(() => {
-    if (groups && groups.length > 0) {
-      const fromApi = new Set(groups.filter(g => g.isJoined).map(g => g.id));
-      if (fromApi.size > 0) setJoined(fromApi);
-    }
-  }, [groups]);
+  const joined = joinedGroups;
 
   if (loading) return <LoadingSpinner text="Loading groups..." />;
   if (error) return <ErrorMessage message={error} />;
@@ -106,7 +98,7 @@ function GroupsPage() {
                   <button
                     className="li-btn li-btn--ghost li-btn--sm"
                     onClick={() => {
-                      setJoined(prev => { const n = new Set(prev); n.delete(group.id); return n; });
+                      leaveGroup(group.id);
                       showToast('Left group');
                     }}
                   >
@@ -117,7 +109,7 @@ function GroupsPage() {
                     className="li-btn li-btn--primary li-btn--sm"
                     style={{ flex: 1 }}
                     onClick={() => {
-                      setJoined(prev => new Set([...prev, group.id]));
+                      joinGroup(group.id);
                       showToast(`Joined "${group.name}"!`);
                     }}
                   >

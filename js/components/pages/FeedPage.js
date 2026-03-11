@@ -49,8 +49,12 @@ function FeedPage() {
       comments: [],
     };
     setLocalPosts(prev => [newPost, ...(prev || [])]);
-    API.createPost(content).catch(() => {});
-    showToast('Post shared!', 'success');
+    API.createPost(content)
+      .then(() => showToast('Post shared!', 'success'))
+      .catch(() => {
+        setLocalPosts(prev => (prev || []).filter(p => p.id !== newPost.id));
+        showToast('Failed to post. Please try again.', 'error');
+      });
   }
 
   function toggleCommentsFor(postId) {

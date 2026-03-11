@@ -94,13 +94,18 @@ function JobsPage({ selectedJobId }) {
                     {savedJobs.has(job.id) ? '★' : '☆'}
                   </button>
                 </div>
-                {job.easyApply && (
-                  <div style={{ marginTop: 8 }}>
+                <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {isApplied(job.id) && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1e7e34', background: '#E6F4EA', padding: '2px 6px', borderRadius: 4 }}>
+                      ✓ Applied
+                    </span>
+                  )}
+                  {job.easyApply && !isApplied(job.id) && (
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', background: '#EAF4FF', padding: '2px 6px', borderRadius: 4 }}>
                       Easy Apply
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ))}
           </div>

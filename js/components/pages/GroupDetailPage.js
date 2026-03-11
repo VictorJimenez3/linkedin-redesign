@@ -2,15 +2,10 @@
    GROUPDETAILPAGE.JS — Single group view
    ============================================================ */
 function GroupDetailPage({ groupId }) {
-  const { showToast } = React.useContext(AppContext);
+  const { showToast, joinedGroups, joinGroup, leaveGroup } = React.useContext(AppContext);
   const { data: group, loading, error } = useFetch(() => API.getGroup(groupId), [groupId]);
   const [tab, setTab] = React.useState('posts');
-  const [joined, setJoined] = React.useState(false);
-
-  // Seed joined state from API once data loads
-  React.useEffect(() => {
-    if (group && group.isJoined) setJoined(true);
-  }, [group]);
+  const joined = joinedGroups.has(groupId) || joinedGroups.has(Number(groupId));
 
   if (loading) return <LoadingSpinner text="Loading group..." />;
   if (error) return <ErrorMessage message={error} onRetry={() => window.location.reload()} />;
@@ -46,7 +41,7 @@ function GroupDetailPage({ groupId }) {
           <button
             className={joined ? 'li-btn li-btn--ghost li-btn--sm' : 'li-btn li-btn--primary li-btn--sm'}
             onClick={() => {
-              setJoined(j => !j);
+              joined ? leaveGroup(groupId) : joinGroup(groupId);
               showToast(joined ? 'Left group' : `Joined "${group.name}"!`);
             }}
           >

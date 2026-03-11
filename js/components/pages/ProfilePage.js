@@ -118,7 +118,7 @@ function ProfilePage({ userId }) {
                   ) : (
                     <>
                       {isConnected ? (
-                        <button className="li-btn li-btn--ghost li-btn--sm">Message</button>
+                        <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => navigate('messaging')}>Message</button>
                       ) : (
                         <button
                           className={isPending ? 'li-btn li-btn--ghost li-btn--sm' : 'li-btn li-btn--primary li-btn--sm'}

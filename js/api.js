@@ -78,8 +78,8 @@
     getProfileReadiness: () => request('GET', '/profile-readiness'),
 
     // ── Outreach (Stories #1 & #7) ────────────────────────────
-    generateOutreachMessage: (recipientId, tone, goal, customNote) =>
-      request('POST', '/outreach/generate', { recipientId, tone, goal, custom_note: customNote }),
+    generateOutreachMessage: (recipientId, tone, goal, customNote, details) =>
+      request('POST', '/outreach/generate', { recipientId, tone, goal, custom_note: customNote, details: details || {} }),
     getOutreachReadiness: (userId) =>
       request('GET', userId ? `/outreach/readiness?userId=${encodeURIComponent(userId)}` : '/outreach/readiness'),
 

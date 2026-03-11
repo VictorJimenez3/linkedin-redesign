@@ -376,18 +376,19 @@ function FeedPost({ post, liked, onLike, commentsOpen, onToggleComments, followi
   const repostCount = post.repostCount || post.reposts || 0;
 
   const reactionLabels = { like: 'Like', celebrate: 'Celebrate', love: 'Love', support: 'Support', insightful: 'Insightful', curious: 'Curious', funny: 'Funny' };
-  const topReactLabels = post.reactions ? Object.entries(post.reactions).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => reactionLabels[k] || 'Like') : [];
+  const reactionEmojiMap = { like: '👍', celebrate: '🎉', love: '❤️', support: '🤝', insightful: '💡', curious: '🤔', funny: '😄' };
+  const topReactLabels = post.reactions ? Object.entries(post.reactions).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => reactionEmojiMap[k] || '👍') : [];
 
   const reactionLabel = localReaction || (liked ? 'Liked' : 'Like');
   const isFollowingAuthor = following && following.has(String(authorId));
 
   const reactions = [
-    { emoji: '', name: 'Like', color: '#0F5DBD' },
-    { emoji: '', name: 'Love', color: '#CC1016' },
-    { emoji: '', name: 'Celebrate', color: '#E7A500' },
-    { emoji: '', name: 'Insightful', color: '#5F9B41' },
-    { emoji: '', name: 'Curious', color: '#E06847' },
-    { emoji: '', name: 'Funny', color: '#E7A500' },
+    { emoji: '👍', name: 'Like', color: '#0F5DBD' },
+    { emoji: '❤️', name: 'Love', color: '#CC1016' },
+    { emoji: '🎉', name: 'Celebrate', color: '#E7A500' },
+    { emoji: '💡', name: 'Insightful', color: '#5F9B41' },
+    { emoji: '🤔', name: 'Curious', color: '#E06847' },
+    { emoji: '😄', name: 'Funny', color: '#E7A500' },
   ];
 
   function handleLikeHover() {

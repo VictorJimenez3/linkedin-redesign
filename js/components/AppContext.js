@@ -17,7 +17,12 @@ function AppProvider({ children }) {
   const [following, setFollowing] = React.useState(() => new Set());
   const [pendingConnections, setPendingConnections] = React.useState(() => new Set());
 
-  const [dismissedInvitations, setDismissedInvitations] = React.useState(() => new Set());
+  const [dismissedInvitations, setDismissedInvitations] = React.useState(() => {
+    try { const s = localStorage.getItem('li-dismissed-inv'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
+  });
+  const [appliedJobs, setAppliedJobs] = React.useState(() => {
+    try { const s = localStorage.getItem('li-applied-jobs'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
+  });
   const [unreadMessages, setUnreadMessages] = React.useState(0);
   const [unreadNotifications, setUnreadNotifications] = React.useState(0);
 
@@ -110,7 +115,19 @@ function AppProvider({ children }) {
   }
 
   function dismissInvitation(key) {
-    setDismissedInvitations(prev => new Set([...prev, key]));
+    setDismissedInvitations(prev => {
+      const next = new Set([...prev, key]);
+      try { localStorage.setItem('li-dismissed-inv', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
+  function applyJob(jobId) {
+    setAppliedJobs(prev => {
+      const next = new Set([...prev, String(jobId)]);
+      try { localStorage.setItem('li-applied-jobs', JSON.stringify([...next])); } catch {}
+      return next;
+    });
   }
 
   function follow(userId) {
@@ -160,6 +177,8 @@ function AppProvider({ children }) {
     setCurrentUser,
     dismissedInvitations,
     dismissInvitation,
+    appliedJobs,
+    applyJob,
     // Actions
     toggleLike,
     toggleSaveJob,

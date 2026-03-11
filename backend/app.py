@@ -404,11 +404,15 @@ def outreach_generate():
         body.get("custom_note") or "", outreach_mod.MAX_CUSTOM_NOTE
     )
 
+    raw_details = body.get("details") or {}
+    details = {k: outreach_mod.sanitize_text(str(v), 100) for k, v in raw_details.items() if isinstance(v, str) and k in {"recipient", "yourRole", "field", "company", "role", "context"}}
+    context = {"tone": tone, "goal": goal, "custom_note": custom_note, "details": details}
+
     current_user = dbl.get_current_user()
     result = outreach_mod.generate_outreach_message(
         current_user,
         recipient,
-        {"tone": tone, "goal": goal, "custom_note": custom_note},
+        context,
     )
     return jsonify(result), 200
 

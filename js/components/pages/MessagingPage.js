@@ -234,8 +234,16 @@ function MessagingPage() {
 
       const mapping = _GOAL_BACKEND_MAP[s.goal] || { goal: 'networking', tone: 'professional' };
       const d = s.details || {};
-      const noteParts = [d.company, d.role, d.context].filter(Boolean);
+      const noteParts = [d.context].filter(Boolean);
       const customNote = noteParts.join(' — ');
+      const details = {
+        recipient: d.recipient || '',
+        yourRole: d.yourRole || '',
+        field: d.field || '',
+        company: d.company || '',
+        role: d.role || '',
+        context: d.context || '',
+      };
 
       const conv = (conversations || []).find(c => c.id === selectedId);
       const recipientId = conv?.participant?.id ?? null;
@@ -245,7 +253,7 @@ function MessagingPage() {
         return;
       }
 
-      API.generateOutreachMessage(recipientId, mapping.tone, mapping.goal, customNote)
+      API.generateOutreachMessage(recipientId, mapping.tone, mapping.goal, customNote, details)
         .then(data => {
           const variants = [data.draft, ...(data.alternatives || [])].filter(Boolean);
           setGuideState({

@@ -159,12 +159,36 @@ def generate_outreach_message(sender, recipient, context):
     role    = exp[0].get("title",   "your field")   if exp else "your field"
     company = exp[0].get("company", "your company") if exp else "your company"
 
+    details     = context.get("details", {})
+    their_field = details.get("field", "").strip()
+    sender_role = details.get("yourRole", "").strip()
+    company_d   = details.get("company", "").strip()
+    role_d      = details.get("role", "").strip()
+    extra_ctx   = details.get("context", "").strip()
+
+    goal_line = _GOAL_LINES[goal]
+    # Inject specific details into goal line
+    if their_field:
+        goal_line = goal_line.replace("your career path", f"your work in {their_field}")
+        goal_line = goal_line.replace("your field", their_field)
+        goal_line = goal_line.replace("in your field", f"in {their_field}")
+        goal_line = goal_line.replace("opportunities on your team", f"opportunities in {their_field}" + (f" at {company_d}" if company_d else ""))
+    if role_d and company_d and goal in ("job_inquiry",):
+        goal_line = f"I am very interested in the {role_d} role at {company_d} and believe my background aligns well."
+    elif role_d and goal in ("job_inquiry",):
+        goal_line = f"I am very interested in the {role_d} opportunity and believe my background aligns well."
+    elif company_d and goal in ("job_inquiry", "networking"):
+        goal_line += f" I'm particularly drawn to the work happening at {company_d}."
+
     body = (
         f"Hi {recipient_first},\n\n"
-        f"{_TONE_OPENERS[tone]} I'm {sender_first}. "
-        f"{_GOAL_LINES[goal]}"
+        f"{_TONE_OPENERS[tone]} I'm {sender_first}"
+        + (f", {sender_role}" if sender_role else "") + f". "
+        f"{goal_line}"
     )
-    if custom_note:
+    if extra_ctx:
+        body += f" {extra_ctx}"
+    if custom_note and custom_note not in (extra_ctx or ""):
         body += f" {custom_note}"
     body += f"\n\n{_TONE_CLOSERS[tone]}\n\n— {sender_first}"
 

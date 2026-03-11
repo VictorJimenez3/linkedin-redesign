@@ -2,11 +2,10 @@
    JOBSPAGE.JS — Jobs search (split panel)
    ============================================================ */
 function JobsPage({ selectedJobId }) {
-  const { savedJobs, toggleSaveJob, openModal, showToast } = React.useContext(AppContext);
+  const { savedJobs, toggleSaveJob, openModal, showToast, appliedJobs, applyJob } = React.useContext(AppContext);
   const { data: jobs, loading, error } = useFetch(API.getJobs, []);
   const [selectedId, setSelectedId] = React.useState(selectedJobId ? Number(selectedJobId) : null);
   const [searchQ, setSearchQ] = React.useState('');
-  const [filter, setFilter] = React.useState('all');
 
   React.useEffect(() => {
     if (jobs && jobs.length && !selectedId) setSelectedId(jobs[0].id);
@@ -21,6 +20,7 @@ function JobsPage({ selectedJobId }) {
     const q = searchQ.toLowerCase();
     return j.title?.toLowerCase().includes(q) || j.company?.toLowerCase().includes(q) || j.location?.toLowerCase().includes(q);
   });
+  const isApplied = (jobId) => appliedJobs.has(String(jobId));
 
   const selectedJob = allJobs.find(j => j.id === selectedId);
 
@@ -51,24 +51,6 @@ function JobsPage({ selectedJobId }) {
         </div>
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {['all', 'Full-time', 'Remote', 'Hybrid', 'Part-time'].map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{
-              padding: '6px 14px', borderRadius: 16, fontSize: 13, cursor: 'pointer',
-              border: filter === f ? '2px solid var(--blue)' : '1px solid var(--border)',
-              background: filter === f ? '#EAF4FF' : 'var(--white)',
-              color: filter === f ? 'var(--blue)' : 'var(--text)',
-              fontWeight: filter === f ? 600 : 400,
-            }}
-          >
-            {f === 'all' ? 'All filters' : f}
-          </button>
-        ))}
-      </div>
 
       {/* Split pane */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
@@ -134,7 +116,7 @@ function JobsPage({ selectedJobId }) {
               <p>Select a job to view details</p>
             </div>
           ) : (
-            <JobDetailPanel job={selectedJob} savedJobs={savedJobs} toggleSaveJob={toggleSaveJob} openModal={openModal} showToast={showToast} />
+            <JobDetailPanel job={selectedJob} savedJobs={savedJobs} toggleSaveJob={toggleSaveJob} openModal={openModal} showToast={showToast} isApplied={isApplied} applyJob={applyJob} />
           )}
         </div>
       </div>
@@ -142,7 +124,7 @@ function JobsPage({ selectedJobId }) {
   );
 }
 
-function JobDetailPanel({ job, savedJobs, toggleSaveJob, openModal, showToast }) {
+function JobDetailPanel({ job, savedJobs, toggleSaveJob, openModal, showToast, isApplied, applyJob }) {
   return (
     <div className="li-card" style={{ padding: 24 }}>
       {/* Header */}
@@ -195,10 +177,11 @@ function JobDetailPanel({ job, savedJobs, toggleSaveJob, openModal, showToast })
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         <button
           className="li-btn li-btn--primary"
-          onClick={() => openModal('apply', { jobTitle: job.title })}
-          style={{ flex: 1 }}
+          onClick={() => { if (!isApplied(job.id)) { applyJob(job.id); openModal('apply', { jobTitle: job.title, job }); } }}
+          style={{ flex: 1, opacity: isApplied(job.id) ? 0.7 : 1 }}
+          disabled={isApplied(job.id)}
         >
-          {job.easyApply ? 'Easy Apply' : 'Apply now'}
+          {isApplied(job.id) ? '✓ Applied' : (job.easyApply ? 'Easy Apply' : 'Apply now')}
         </button>
         <button
           className="li-btn li-btn--ghost"

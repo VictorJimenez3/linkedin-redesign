@@ -25,13 +25,13 @@ BASE = "http://localhost:5000/api"
 
 # ── Transport helpers ──────────────────────────────────────────
 
-def _req(method, path, body=None):
+def _req(method, path, body=None, token=None):
     url  = BASE + path
     data = json.dumps(body).encode() if body is not None else None
-    req  = urllib.request.Request(
-        url, data=data, method=method,
-        headers={"Content-Type": "application/json"},
-    )
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = "Bearer " + token
+    req  = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req) as r:
             raw = r.read()
@@ -46,10 +46,10 @@ def _req(method, path, body=None):
             payload = {}
         return e.code, payload
 
-def get(path):              return _req("GET",    path)
-def post(path, body=None):  return _req("POST",   path, body)
-def patch(path):            return _req("PATCH",  path)
-def delete(path):           return _req("DELETE", path)
+def get(path, token=None):              return _req("GET",    path, token=token)
+def post(path, body=None, token=None):  return _req("POST",   path, body, token=token)
+def patch(path, token=None):            return _req("PATCH",  path, token=token)
+def delete(path, token=None):           return _req("DELETE", path, token=token)
 
 # ── Test runner ────────────────────────────────────────────────
 
@@ -295,14 +295,18 @@ _suffix = uuid.uuid4().hex[:8]
 _email  = f"testuser_{_suffix}@nexus.test"
 
 s, b = post("/auth/register", {"name": "Test User", "email": _email, "password": "securePass123"})
+_reg_user  = b.get("user", {})
+_reg_token = b.get("token", "")
 ok("POST /auth/register  creates account", s, b, [
-    ("status 201",   s == 201),
-    ("has id",       "id" in b),
-    ("has name",     b.get("name") == "Test User"),
-    ("has email",    b.get("email") == _email),
-    ("no password",  "password" not in b and "passwordHash" not in b),
+    ("status 201",        s == 201),
+    ("has user object",   isinstance(_reg_user, dict)),
+    ("has token",         bool(_reg_token)),
+    ("user has id",       "id" in _reg_user),
+    ("user has name",     _reg_user.get("name") == "Test User"),
+    ("user has email",    _reg_user.get("email") == _email),
+    ("no password hash",  "password" not in _reg_user and "pw_hash" not in _reg_user),
 ])
-_new_user_id = b.get("id")
+_new_user_id = _reg_user.get("id")
 
 # Duplicate email must return 409
 s, b = post("/auth/register", {"name": "Dup", "email": _email, "password": "securePass123"})
@@ -345,6 +349,65 @@ ok("DELETE /users/1  forbidden -> 403", s, b, [
 # Cannot delete non-existent user
 s, b = delete("/users/9999")
 err("DELETE /users/9999  not found -> 404", s, b, 404)
+
+# ══════════════════════════════════════════════════════════════
+# 2c. AUTH — POST /api/auth/login
+# ══════════════════════════════════════════════════════════════
+
+section("Auth — POST /api/auth/login")
+
+# Create a fresh user to test login with
+_login_suffix = uuid.uuid4().hex[:8]
+_login_email  = f"logintest_{_login_suffix}@nexus.test"
+_login_pw     = "LoginPass99!"
+s, b = post("/auth/register", {"name": "Login Tester", "email": _login_email, "password": _login_pw})
+_login_user_id = b.get("user", {}).get("id")
+
+# Successful login
+s, b = post("/auth/login", {"email": _login_email, "password": _login_pw})
+_login_token = b.get("token", "")
+ok("POST /auth/login  correct credentials -> {user, token}", s, b, [
+    ("status 200",        s == 200),
+    ("has user object",   isinstance(b.get("user"), dict)),
+    ("user email matches", b.get("user", {}).get("email") == _login_email),
+    ("has token string",  bool(_login_token)),
+    ("no pw_hash in user","pw_hash" not in b.get("user", {})),
+])
+
+# Wrong password -> 401
+s, b = post("/auth/login", {"email": _login_email, "password": "wrongpassword"})
+err("POST /auth/login  wrong password -> 401", s, b, 401)
+
+# Unknown email -> 401
+s, b = post("/auth/login", {"email": "nobody@nexus.test", "password": _login_pw})
+err("POST /auth/login  unknown email -> 401", s, b, 401)
+
+# Missing fields -> 400
+s, b = post("/auth/login", {"email": _login_email})
+err("POST /auth/login  missing password -> 400", s, b, 400)
+
+s, b = post("/auth/login", {})
+err("POST /auth/login  empty body -> 400", s, b, 400)
+
+# Token allows authenticated access to /me
+if _login_token:
+    s, b = get("/me", token=_login_token)
+    ok("GET /me with token  returns correct user", s, b, [
+        ("status 200",         s == 200),
+        ("email matches",      b.get("email") == _login_email),
+        ("id matches",         b.get("id") == _login_user_id),
+    ])
+
+# Invalid token -> falls back to default user (id=1), not a 401
+s, b = get("/me", token="thisisnotavalidtoken")
+ok("GET /me with invalid token  falls back to user id=1", s, b, [
+    ("status 200", s == 200),
+    ("id is 1",    b.get("id") == 1),
+])
+
+# Clean up login test user
+if _login_user_id:
+    delete(f"/users/{_login_user_id}")
 
 # ══════════════════════════════════════════════════════════════
 # 2b. DATABASE — POSTS WITH ACCOUNT RECORDS
@@ -622,13 +685,14 @@ err("POST /auth/register  7-char password -> 400", s, b, 400)
 # but the server must not crash
 _xss_email = f"xss_{_suffix}@nexus.test"
 s, b = post("/auth/register", {"name": "<script>alert(1)</script>", "email": _xss_email, "password": "securePass123"})
+_xss_user = b.get("user", {})
 ok("POST /auth/register  XSS in name accepted (sanitise on output)", s, b, [
     ("2xx",    s in (200, 201)),
-    ("has id", "id" in b),
+    ("has id", "id" in _xss_user),
 ])
 # Clean up
-if "id" in b:
-    delete(f"/users/{b['id']}")
+if "id" in _xss_user:
+    delete(f"/users/{_xss_user['id']}")
 
 # ══════════════════════════════════════════════════════════════
 # SUMMARY

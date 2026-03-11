@@ -283,9 +283,9 @@ def update_current_user(updates: dict, user_id: int = 1):
     return data
 
 
-def get_all_users():
+def get_all_users(exclude_id: int = 1):
     conn = _connect()
-    rows = conn.execute("SELECT data FROM users WHERE id != 1").fetchall()
+    rows = conn.execute("SELECT data FROM users WHERE id != ?", (exclude_id,)).fetchall()
     conn.close()
     return [json.loads(r["data"]) for r in rows]
 
@@ -571,7 +571,7 @@ def mark_all_notifications_read():
 # ---------------------------------------------------------------------------
 # Search
 # ---------------------------------------------------------------------------
-def search(q: str):
+def search(q: str, exclude_user_id: int = 1):
     """Full-text search across users, jobs, companies, and posts."""
     q_lower = q.lower().strip()
     if not q_lower:
@@ -580,7 +580,7 @@ def search(q: str):
     conn = _connect()
 
     # Users
-    user_rows = conn.execute("SELECT data FROM users WHERE id != 1").fetchall()
+    user_rows = conn.execute("SELECT data FROM users WHERE id != ?", (exclude_user_id,)).fetchall()
     users = [
         json.loads(r["data"]) for r in user_rows
         if q_lower in json.loads(r["data"]).get("name", "").lower()

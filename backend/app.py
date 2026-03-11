@@ -166,7 +166,8 @@ def update_me():
 @app.route("/api/users")
 def get_users():
     """GET /api/users — all users in the network (excludes current user)."""
-    return jsonify(dbl.get_all_users())
+    current = _auth_user()
+    return jsonify(dbl.get_all_users(current["id"] if current else 1))
 
 
 @app.route("/api/users/<int:user_id>")
@@ -370,7 +371,8 @@ def search():
     q = (request.args.get("q") or "").strip()
     if not q:
         return jsonify({"users": [], "jobs": [], "companies": [], "posts": [], "query": ""})
-    return jsonify(dbl.search(q))
+    current = _auth_user()
+    return jsonify(dbl.search(q, exclude_user_id=current["id"] if current else 1))
 
 
 # ══════════════════════════════════════════════════════════════

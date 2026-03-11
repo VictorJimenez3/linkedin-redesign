@@ -39,7 +39,9 @@ function ProfilePage({ userId }) {
   );
 
   const [expandedSections, setExpandedSections] = React.useState(new Set());
-  const [coverUrl, setCoverUrl] = React.useState(null);
+  const [coverUrl, setCoverUrl] = React.useState(() => {
+    try { return localStorage.getItem('li-cover-photo') || null; } catch { return null; }
+  });
 
   function toggleSection(key) {
     setExpandedSections(prev => {
@@ -80,7 +82,9 @@ function ProfilePage({ userId }) {
                       if (!file) return;
                       const reader = new FileReader();
                       reader.onload = (ev) => {
-                        setCoverUrl(ev.target.result);
+                        const dataUrl = ev.target.result;
+                        setCoverUrl(dataUrl);
+                        try { localStorage.setItem('li-cover-photo', dataUrl); } catch {}
                         showToast('Cover photo updated!', 'success');
                       };
                       reader.readAsDataURL(file);

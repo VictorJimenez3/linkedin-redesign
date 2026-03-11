@@ -25,7 +25,14 @@ function FeedPage() {
     </div>
   );
 
-  const allPosts = localPosts || [];
+  const rawPosts = localPosts || [];
+  const allPosts = feedSort === 'Recent'
+    ? [...rawPosts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+    : [...rawPosts].sort((a, b) => {
+        const ra = a.reactions ? Object.values(a.reactions).reduce((s, v) => s + v, 0) : (a.totalReactions || 0);
+        const rb = b.reactions ? Object.values(b.reactions).reduce((s, v) => s + v, 0) : (b.totalReactions || 0);
+        return rb - ra;
+      });
   const u = currentUser || {};
 
   function handleNewPost(content) {

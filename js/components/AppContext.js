@@ -17,6 +17,7 @@ function AppProvider({ children }) {
   const [following, setFollowing] = React.useState(() => new Set());
   const [pendingConnections, setPendingConnections] = React.useState(() => new Set());
 
+  const [dismissedInvitations, setDismissedInvitations] = React.useState(() => new Set());
   const [unreadMessages, setUnreadMessages] = React.useState(0);
   const [unreadNotifications, setUnreadNotifications] = React.useState(0);
 
@@ -108,6 +109,10 @@ function AppProvider({ children }) {
     });
   }
 
+  function dismissInvitation(key) {
+    setDismissedInvitations(prev => new Set([...prev, key]));
+  }
+
   function follow(userId) {
     setFollowing(prev => new Set([...prev, String(userId)]));
   }
@@ -153,6 +158,8 @@ function AppProvider({ children }) {
     // Toasts
     toasts,
     setCurrentUser,
+    dismissedInvitations,
+    dismissInvitation,
     // Actions
     toggleLike,
     toggleSaveJob,

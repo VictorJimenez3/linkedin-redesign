@@ -211,15 +211,8 @@ function MessagingPage() {
   }
 
   function selectGoal(goalKey) {
-    const cur = guideStateByConv[selectedId] || {};
-    const updated = {
-      ...cur,
-      goal: goalKey,
-      step: 2,
-      variantIdx: 0,
-    };
-    updated.preview = computeGuidePreview(updated);
-    setGuideState(updated);
+    // Just highlight the goal, stay on step 1 — user clicks Next to advance
+    setGuideState({ goal: goalKey });
   }
 
   function nextStep() {

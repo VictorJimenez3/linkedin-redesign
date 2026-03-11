@@ -2,17 +2,17 @@
    NETWORKPAGE.JS — My Network / People You May Know
    ============================================================ */
 function NetworkPage() {
-  const { connections, connect, pendingConnections, showToast } = React.useContext(AppContext);
+  const { connections, connect, pendingConnections, showToast, dismissedInvitations, dismissInvitation } = React.useContext(AppContext);
   const { data: users, loading: usersLoading } = useFetch(API.getUsers, []);
   const { data: invitations, loading: invitesLoading } = useFetch(API.getInvitations, []);
   const [tab, setTab] = React.useState('suggestions');
-  const [dismissedInvitations, setDismissedInvitations] = React.useState(new Set());
 
   const loading = usersLoading || invitesLoading;
   if (loading) return <LoadingSpinner text="Loading network..." />;
 
   const allUsers = users || [];
   const allInvitations = invitations || [];
+  const visibleInvitations = allInvitations.filter(inv => !dismissedInvitations.has((inv.user || inv).name || inv.senderName || ''));
 
   return (
     <div className="li-page-inner">
@@ -20,21 +20,21 @@ function NetworkPage() {
         {/* Main content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Invitations */}
-          {allInvitations.length > 0 && (
+          {visibleInvitations.length > 0 && (
             <div className="li-card" style={{ padding: '16px 24px', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 700 }}>Invitations ({allInvitations.length})</h2>
+                <h2 style={{ fontSize: 16, fontWeight: 700 }}>Invitations ({visibleInvitations.length})</h2>
                 <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => showToast('All invitations viewed')}>
                   See all
                 </button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {allInvitations.slice(0, 3).filter((_, i) => !dismissedInvitations.has(i)).map((inv, i) => {
+                {visibleInvitations.slice(0, 3).map((inv, i) => {
                   const invUser = inv.user || inv;
                   const invName = invUser.name || inv.senderName || 'Unknown';
                   const invHeadline = invUser.headline || inv.headline || inv.title || '';
                   return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div key={invName} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <Avatar name={invName} size={48} colorOverride={invUser.avatarColor} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600 }}>{invName}</div>
@@ -43,11 +43,11 @@ function NetworkPage() {
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => {
-                          setDismissedInvitations(prev => new Set([...prev, i]));
+                          dismissInvitation(invName);
                           showToast('Invitation ignored');
                         }}>Ignore</button>
                         <button className="li-btn li-btn--outline li-btn--sm" onClick={() => {
-                          setDismissedInvitations(prev => new Set([...prev, i]));
+                          dismissInvitation(invName);
                           showToast(`Connected with ${invName}!`);
                         }}>Accept</button>
                       </div>

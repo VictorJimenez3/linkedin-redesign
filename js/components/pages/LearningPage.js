@@ -83,7 +83,7 @@ function LearningPage() {
 
         {shownCourses.length === 0 ? (
           <div className="li-card" style={{ padding: 40, textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📚</div>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>Learn</div>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
               {tab === 'my-learning' && 'No courses in progress'}
               {tab === 'completed' && 'No completed courses yet'}
@@ -108,7 +108,7 @@ function LearningPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 40,
                 }}>
-                  {!course.thumbnail && (course.emoji || '📖')}
+                  {!course.thumbnail && (course.emoji || '')}
                   {course.thumbnail && (
                     <img src={course.thumbnail} alt={course.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   )}

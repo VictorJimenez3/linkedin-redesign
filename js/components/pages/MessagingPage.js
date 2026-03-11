@@ -285,11 +285,11 @@ function MessagingPage() {
               <div style={{ display: 'flex', gap: 4 }}>
                 <button className="li-btn li-btn--ghost" style={{ padding: 4 }}
                   onClick={() => showToast('New message — coming soon')}>
-                  ✍️
+                  Write
                 </button>
                 <button className="li-btn li-btn--ghost" style={{ padding: 4 }}
                   onClick={() => showToast('Settings — coming soon')}>
-                  ⚙️
+                  Settings
                 </button>
               </div>
             </div>
@@ -345,7 +345,7 @@ function MessagingPage() {
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
               title="Outreach Guide"
             >
-              ✨ Guide
+              Guide
             </button>
 
             <button
@@ -355,7 +355,7 @@ function MessagingPage() {
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
               title="Profile Readiness"
             >
-              📊 Score
+              Score
             </button>
           </div>
 
@@ -471,7 +471,7 @@ function OutreachGuidePanel({
     <div className="li-msg-guide" role="complementary" aria-label="Outreach message guide">
       <div className="li-msg-guide__header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 15 }}>✨</span>
+          <span style={{ fontSize: 15 }}></span>
           <span className="li-msg-guide__title">Outreach Guide</span>
           <div className="li-msg-guide__dots">
             <div className={'li-msg-guide__dot' + (state.step === 1 ? ' active' : ' done')}><span>1</span></div>
@@ -529,7 +529,7 @@ function OutreachGuidePanel({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span className="li-msg-guide__tone-badge">{tone}</span>
                   <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{variantLabel}</span>
-                  <button className="li-msg-guide__cycle-btn" onClick={onCycle} title="Try another version">🔁 Try another</button>
+                  <button className="li-msg-guide__cycle-btn" onClick={onCycle} title="Try another version">Try another</button>
                 </div>
               </div>
 
@@ -555,7 +555,7 @@ function OutreachGuidePanel({
                 Pick a goal to see tailored tips
               </div>
             ) : tips.map((t, idx) => (
-              <div key={idx} className="li-msg-guide__tip">✅ {t}</div>
+              <div key={idx} className="li-msg-guide__tip">- {t}</div>
             ))}
           </div>
         </div>
@@ -602,7 +602,7 @@ function ProfileReadinessPanel({ readiness, loading, error, onClose, onRefresh }
     <div className="li-msg-score" role="complementary" aria-label="Profile readiness score">
       <div className="li-msg-score__header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 15 }}>📊</span>
+          <span style={{ fontSize: 15 }}>Score</span>
           <span className="li-msg-score__title">Profile Readiness</span>
           <span className="li-msg-score__subtitle">Improve your profile before outreach</span>
         </div>
@@ -757,12 +757,12 @@ function mockBackendGetProfileReadiness(user, opts = {}) {
    Outreach guide templates (from your old app.js)
    ───────────────────────────────────────────────────────────── */
 const _OUTREACH_GOALS = [
-  { key: 'advice',   icon: '💡', label: 'Ask for Advice',   desc: 'Career guidance from a pro' },
-  { key: 'job',      icon: '💼', label: 'Job / Internship', desc: 'Express interest in a role' },
-  { key: 'network',  icon: '🤝', label: 'Build Network',    desc: 'Connect in your field' },
-  { key: 'mentor',   icon: '🎓', label: 'Find a Mentor',    desc: 'Request ongoing guidance' },
-  { key: 'followup', icon: '✉️', label: 'Follow Up',        desc: 'After meeting or applying' },
-  { key: 'referral', icon: '⭐', label: 'Ask for Referral', desc: 'Request a job referral' },
+  { key: 'advice',   icon: '', label: 'Ask for Advice',   desc: 'Career guidance from a pro' },
+  { key: 'job',      icon: '', label: 'Job / Internship', desc: 'Express interest in a role' },
+  { key: 'network',  icon: '', label: 'Build Network',    desc: 'Connect in your field' },
+  { key: 'mentor',   icon: '', label: 'Find a Mentor',    desc: 'Request ongoing guidance' },
+  { key: 'followup', icon: '', label: 'Follow Up',        desc: 'After meeting or applying' },
+  { key: 'referral', icon: '', label: 'Ask for Referral', desc: 'Request a job referral' },
 ];
 
 const _OUTREACH_TIPS = {

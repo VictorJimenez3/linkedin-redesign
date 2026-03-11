@@ -30,7 +30,7 @@ function GroupDetailPage({ groupId }) {
           background: group.coverGradient || (group.color ? `linear-gradient(135deg, ${group.color}, #004182)` : 'linear-gradient(135deg, #0a66c2, #004182)'),
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56,
         }}>
-          {group.logo || group.emoji || '👥'}
+          {group.logo || group.emoji || ''}
         </div>
         <div style={{ padding: '16px 24px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>

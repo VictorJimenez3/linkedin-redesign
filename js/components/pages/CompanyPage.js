@@ -28,7 +28,7 @@ function CompanyPage({ companyId }) {
             fontSize: 36, marginTop: -40, marginBottom: 12,
             boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
           }}>
-            {company.logo || company.emoji || '🏢'}
+            {company.logo || company.emoji || ''}
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             <div>
@@ -176,7 +176,7 @@ function CompanyPage({ companyId }) {
 
       {tab === 'people' && (
         <div className="li-card" style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>People</div>
           <p style={{ color: 'var(--text-2)', fontSize: 14 }}>Employee directory coming soon.</p>
         </div>
       )}

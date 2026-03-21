@@ -20,7 +20,7 @@ _DB_PATH = os.path.join(os.path.dirname(__file__), "nexus.db")
 
 
 def _connect():
-    conn = sqlite3.connect(_DB_PATH)
+    conn = sqlite3.connect(_DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -311,9 +311,13 @@ def create_user(name: str, email: str, password: str):
         raise ValueError("email_taken")
 
     pw_hash = _hash_pw(password)
-    # Auto-increment id beyond existing max
-    max_id = conn.execute("SELECT MAX(id) FROM users").fetchone()[0] or 0
-    new_id = max_id + 1
+    # Let SQLite assign the id atomically via INTEGER PRIMARY KEY rowid alias
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO users (name, email, pw_hash, data)
+        VALUES (?, ?, ?, ?)
+    """, (name, email.lower(), pw_hash, json.dumps({})))
+    new_id = c.lastrowid
     user = {
         "id": new_id,
         "name": name,
@@ -330,10 +334,7 @@ def create_user(name: str, email: str, password: str):
         "education": [],
         "skills": [],
     }
-    conn.execute("""
-        INSERT INTO users (id, name, email, pw_hash, data)
-        VALUES (?, ?, ?, ?, ?)
-    """, (new_id, name, email.lower(), pw_hash, json.dumps(user)))
+    c.execute("UPDATE users SET data=? WHERE id=?", (json.dumps(user), new_id))
     conn.commit()
     conn.close()
     return user

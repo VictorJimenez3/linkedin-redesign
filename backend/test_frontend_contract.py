@@ -24,7 +24,8 @@ def req(method, path, body=None):
     )
     try:
         with urllib.request.urlopen(r) as res:
-            return res.status, json.loads(res.read())
+            raw = res.read()
+            return res.status, json.loads(raw) if raw else {}
     except urllib.error.HTTPError as e:
         try:
             payload = json.loads(e.read())

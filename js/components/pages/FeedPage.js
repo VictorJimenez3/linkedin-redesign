@@ -49,6 +49,7 @@ function FeedPage() {
       comments: [],
     };
     setLocalPosts(prev => [newPost, ...(prev || [])]);
+    setFeedSort('Recent');
     API.createPost(content)
       .then(() => showToast('Post shared!', 'success'))
       .catch(() => {

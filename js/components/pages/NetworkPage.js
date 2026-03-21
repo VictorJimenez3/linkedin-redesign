@@ -61,43 +61,50 @@ function NetworkPage() {
           {/* Suggestions */}
           <div className="li-card" style={{ padding: '16px 24px' }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>People you may know</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-              {allUsers.slice(0, 12).map(user => {
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {allUsers.slice(0, 12).map((user, idx) => {
                 const iConnected = connections.has(String(user.id));
                 const isPending = pendingConnections.has(String(user.id));
                 return (
-                  <div key={user.id} className="li-card" style={{ padding: 16, textAlign: 'center', border: '1px solid var(--border)' }}>
-                    {/* Banner */}
-                    <div style={{ height: 40, background: 'linear-gradient(135deg,#0a66c2,#004182)', borderRadius: '6px 6px 0 0', margin: '-16px -16px 0', marginBottom: 8 }} />
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: -20, marginBottom: 8 }}>
-                      <Avatar name={user.name} size={56} />
+                  <div key={user.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
+                    borderBottom: idx < 11 ? '1px solid var(--border)' : 'none',
+                  }}>
+                    <div style={{ flexShrink: 0, cursor: 'pointer' }} onClick={() => navigate(`profile?id=${user.id}`)}>
+                      <Avatar name={user.name} size={48} colorOverride={user.avatarColor} />
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>{user.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 6, lineHeight: 1.3 }}>
-                      {user.headline ? user.headline.slice(0, 50) + (user.headline.length > 50 ? '…' : '') : ''}
-                    </div>
-                    {user.mutualConnections > 0 && (
-                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>
-                        {user.mutualConnections} mutual connections
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{ fontSize: 14, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                        onClick={() => navigate(`profile?id=${user.id}`)}
+                      >{user.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {user.headline ? user.headline.slice(0, 60) + (user.headline.length > 60 ? '…' : '') : ''}
                       </div>
-                    )}
-                    {iConnected ? (
-                      <div style={{ fontSize: 13, color: 'var(--text-2)' }}>Connected</div>
-                    ) : (
-                      <button
-                        className={isPending ? 'li-btn li-btn--ghost li-btn--sm' : 'li-btn li-btn--outline li-btn--sm'}
-                        style={{ width: '100%' }}
-                        onClick={() => {
-                          if (!isPending) {
-                            connect(user.id);
-                            showToast(`Invitation sent to ${user.name}`);
-                          }
-                        }}
-                        disabled={isPending}
-                      >
-                        {isPending ? 'Pending' : '+ Connect'}
-                      </button>
-                    )}
+                      {user.mutualConnections > 0 && (
+                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                          {user.mutualConnections} mutual connections
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      {iConnected ? (
+                        <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Connected</span>
+                      ) : (
+                        <button
+                          className={isPending ? 'li-btn li-btn--ghost li-btn--sm' : 'li-btn li-btn--outline li-btn--sm'}
+                          onClick={() => {
+                            if (!isPending) {
+                              connect(user.id);
+                              showToast(`Invitation sent to ${user.name}`);
+                            }
+                          }}
+                          disabled={isPending}
+                        >
+                          {isPending ? 'Pending' : '+ Connect'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

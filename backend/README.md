@@ -42,7 +42,7 @@ The backend uses a single **SQLite** database file at `backend/nexus.db`.
 
 ```bash
 # From the repo root
-pip install flask flask-cors
+pip install -r backend/requirements.txt
 ```
 
 Python 3.10 or later is required (uses `str.removeprefix`).
@@ -166,13 +166,16 @@ The backend must be running before executing tests.
 # Terminal 1 — start backend
 python backend/app.py
 
-# Terminal 2 — run tests
+# Terminal 2 — run unit + user story tests (89 tests)
 python backend/test_api.py
+
+# Terminal 2 — run frontend contract tests (verifies API shapes match UI expectations)
+python backend/test_frontend_contract.py
 ```
 
 Tests use only Python stdlib (`urllib`, `json`) — no pytest or requests needed.
 
-### Test coverage
+### Test coverage (`backend/test_api.py`)
 - All GET/POST/PATCH endpoints
 - User Story #1 — T1.1–T1.6 (outreach generate)
 - User Story #7 — T7.1–T7.7 (outreach readiness)
@@ -180,3 +183,7 @@ Tests use only Python stdlib (`urllib`, `json`) — no pytest or requests needed
 - Account CRUD — create, find, delete
 - Input validation and security edge cases (XSS, SQL injection strings, control characters)
 - Persistence — data survives across multiple requests
+
+### Frontend contract tests (`backend/test_frontend_contract.py`)
+- Verifies every `window.API.*` call in `js/api.js` receives the exact response shape the React components expect
+- Covers: getMe, getFeed, createPost, getJobs, getConversations, sendMessage, getNotifications, search, getOutreachReadiness, generateOutreachMessage, register, deleteUser, and all static endpoints

@@ -216,14 +216,17 @@ section("Frontend: register() / deleteUser()")
 import uuid
 email = f"contract_{uuid.uuid4().hex[:8]}@test.local"
 s, b = post("/auth/register", {"name": "Contract User", "email": email, "password": "password123"})
+_reg_user = b.get("user", {})
 ok("POST /auth/register  returns user with id, no password", s, b, [
     ("status 201", s == 201),
-    ("id", "id" in b),
-    ("name", b.get("name") == "Contract User"),
-    ("no password", "password" not in b),
+    ("has user object", isinstance(_reg_user, dict)),
+    ("id", "id" in _reg_user),
+    ("name", _reg_user.get("name") == "Contract User"),
+    ("no password", "password" not in _reg_user and "pw_hash" not in _reg_user),
+    ("has token", bool(b.get("token"))),
 ])
-if s == 201 and "id" in b:
-    uid = b["id"]
+if s == 201 and "id" in _reg_user:
+    uid = _reg_user["id"]
     s2, _ = delete(f"/users/{uid}")
     err(f"DELETE /users/{uid}  returns 204", s2, None, 204)
 

@@ -42,10 +42,12 @@ The backend uses a single **SQLite** database file at `backend/nexus.db`.
 
 ```bash
 # From the repo root
-pip install -r backend/requirements.txt
+pip3 install -r backend/requirements.txt
 ```
 
-Python 3.10 or later is required (uses `str.removeprefix`).
+> On macOS with Homebrew Python you may need: `pip3 install --break-system-packages -r backend/requirements.txt`
+
+Python 3.10 or later is required. Dependencies: `flask>=3.0`, `flask-cors>=4.0`.
 
 ---
 
@@ -53,7 +55,7 @@ Python 3.10 or later is required (uses `str.removeprefix`).
 
 ```bash
 # From the repo root
-python backend/app.py
+python3 backend/app.py
 ```
 
 The server starts on **http://localhost:5000** with threading enabled (handles 10+ simultaneous requests).
@@ -79,7 +81,7 @@ Press `Ctrl-C` in the terminal running `app.py`.
 
 ```bash
 rm backend/nexus.db
-python backend/app.py   # re-creates and re-seeds the database on startup
+python3 backend/app.py   # re-creates and re-seeds the database on startup
 ```
 
 This resets all posts, messages, notifications, sessions, and user accounts (including any registered test users) back to the seed data.
@@ -164,10 +166,10 @@ The backend must be running before executing tests.
 
 ```bash
 # Terminal 1 — start backend
-python backend/app.py
+python3 backend/app.py
 
 # Terminal 2 — run unit + user story tests (89 tests)
-python backend/test_api.py
+python3 backend/test_api.py
 
 # Terminal 2 — run frontend contract tests (verifies API shapes match UI expectations)
 python backend/test_frontend_contract.py

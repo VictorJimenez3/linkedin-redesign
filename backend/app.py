@@ -9,8 +9,8 @@ Static reference data (events, groups, courses, news, invitations, hashtags)
 is served directly from data/*.py — they have no mutation routes.
 
 Run:
-    pip install flask flask-cors
-    python backend/app.py
+    pip3 install -r backend/requirements.txt
+    python3 backend/app.py
 """
 
 from flask import Flask, jsonify, request, abort, send_from_directory

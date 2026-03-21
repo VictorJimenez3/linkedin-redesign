@@ -11,15 +11,17 @@ A LinkedIn-style professional networking SPA built with vanilla JavaScript + Rea
 ### 1. Install dependencies
 
 ```bash
-pip install -r backend/requirements.txt
+pip3 install -r backend/requirements.txt
 ```
 
-Python 3.10+ required.
+> On macOS with Homebrew Python you may need: `pip3 install --break-system-packages -r backend/requirements.txt`
+
+Python 3.10+ required. Dependencies: `flask>=3.0`, `flask-cors>=4.0`.
 
 ### 2. Start the backend
 
 ```bash
-python backend/app.py
+python3 backend/app.py
 ```
 
 ### 3. Open the app
@@ -37,10 +39,10 @@ The backend must be running first.
 
 ```bash
 # Unit + user story tests (89 tests)
-python backend/test_api.py
+python3 backend/test_api.py
 
 # Frontend API contract tests
-python backend/test_frontend_contract.py
+python3 backend/test_frontend_contract.py
 ```
 
 ---
@@ -49,7 +51,7 @@ python backend/test_frontend_contract.py
 
 ```bash
 rm backend/nexus.db
-python backend/app.py
+python3 backend/app.py
 ```
 
 ---

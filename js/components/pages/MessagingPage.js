@@ -170,6 +170,7 @@ function MessagingPage() {
           backendTone: null,     // tone string from API
           details: {
             recipient: '',
+            senderFirstName: (currentUser?.name || '').split(' ')[0] || '',
             yourRole: '',
             field: '',
             company: '',
@@ -588,7 +589,7 @@ function OutreachGuidePanel({
               <div className="li-msg-guide__step-label">Personalize your message</div>
               <div className="li-msg-guide__fields">
                 <Field label="Their first name" value={state.details.recipient} onChange={(v) => onDetailsChange({ recipient: v })} />
-                <Field label="Your name / major" value={state.details.yourRole} onChange={(v) => onDetailsChange({ yourRole: v })} />
+                <Field label="Your major / role" placeholder="e.g. CS student" value={state.details.yourRole} onChange={(v) => onDetailsChange({ yourRole: v })} />
                 <Field label="Their field / industry" value={state.details.field} onChange={(v) => onDetailsChange({ field: v })} />
                 <Field label="Company (optional)" value={state.details.company} onChange={(v) => onDetailsChange({ company: v })} />
                 <Field label="Role (optional)" value={state.details.role} onChange={(v) => onDetailsChange({ role: v })} />
@@ -662,11 +663,11 @@ function OutreachGuidePanel({
   );
 }
 
-function Field({ label, value, onChange }) {
+function Field({ label, value, onChange, placeholder }) {
   return (
     <div className="li-msg-guide__field-row">
       <label>{label}</label>
-      <input className="li-msg-guide__input" value={value || ''} onChange={(e) => onChange(e.target.value)} />
+      <input className="li-msg-guide__input" value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder || ''} />
     </div>
   );
 }
@@ -902,41 +903,50 @@ const _OUTREACH_TIPS = {
   ],
 };
 
+const _senderIntro = (d) => {
+  const name = d.senderFirstName || '';
+  const role = d.yourRole || '';
+  if (name && role) return `I'm ${name}, a ${role}`;
+  if (name) return `I'm ${name}`;
+  if (role) return `I'm a ${role}`;
+  return 'I';
+};
+
 const _OUTREACH_TEMPLATES = {
   advice: [
     {
       tone: 'Warm',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI'm ${d.yourRole || '[your name/major]'} and I've been following your work in ${d.field || '[their field]'}. I'd love to learn from your experience — would you have 15–20 minutes for a quick chat sometime?\n\nThanks so much for considering it!`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\n${_senderIntro(d)} and I've been following your work in ${d.field || '[their field]'}. I'd love to learn from your experience — would you have 15–20 minutes for a quick chat sometime?\n\nThanks so much for considering it!`,
     },
     {
       tone: 'Professional',
-      template: (d) => `Hello ${d.recipient || '[Name]'},\n\nMy name is ${d.yourRole || '[your name]'} and I'm currently studying ${d.field || '[field]'}. I came across your profile and was impressed by your background. I'd greatly appreciate any insights you could share about your career path.\n\nWould you be open to a brief informational chat?`,
+      template: (d) => `Hello ${d.recipient || '[Name]'},\n\nMy name is ${d.senderFirstName || '[your name]'}${d.yourRole ? ` and I'm a ${d.yourRole}` : ''} currently studying ${d.field || '[field]'}. I came across your profile and was impressed by your background. I'd greatly appreciate any insights you could share about your career path.\n\nWould you be open to a brief informational chat?`,
     },
   ],
   job: [
     {
       tone: 'Direct',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI saw the ${d.role || '[role]'} opening at ${d.company || '[Company]'} and I'm really interested. I'm ${d.yourRole || '[your name/major]'} with experience in ${d.field || '[skill/area]'}.\n\nWould you be open to a quick chat about the team and what you look for in candidates?`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI saw the ${d.role || '[role]'} opening at ${d.company || '[Company]'} and I'm really interested. ${_senderIntro(d)} with experience in ${d.field || '[skill/area]'}.\n\nWould you be open to a quick chat about the team and what you look for in candidates?`,
     },
     {
       tone: 'Warm',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nHope you're doing well! I'm ${d.yourRole || '[your name/major]'} and I'm exploring opportunities in ${d.field || '[field]'}.\n\nIf you have 10–15 minutes, I'd love to hear what your experience has been like at ${d.company || '[Company]'}.`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nHope you're doing well! ${_senderIntro(d)} and I'm exploring opportunities in ${d.field || '[field]'}.\n\nIf you have 10–15 minutes, I'd love to hear what your experience has been like at ${d.company || '[Company]'}.`,
     },
   ],
   network: [
     {
       tone: 'Friendly',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI'm ${d.yourRole || '[your name/major]'} and I'm trying to learn more about ${d.field || '[field]'}.\n\nYour path really stood out to me — would you be open to connecting?`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\n${_senderIntro(d)} and I'm trying to learn more about ${d.field || '[field]'}.\n\nYour path really stood out to me — would you be open to connecting?`,
     },
     {
       tone: 'Professional',
-      template: (d) => `Hello ${d.recipient || '[Name]'},\n\nI'm ${d.yourRole || '[your name/major]'} and I'm building my network in ${d.field || '[field]'}. I'd love to connect and follow your work.\n\nThanks!`,
+      template: (d) => `Hello ${d.recipient || '[Name]'},\n\n${_senderIntro(d)} and I'm building my network in ${d.field || '[field]'}. I'd love to connect and follow your work.\n\nThanks!`,
     },
   ],
   mentor: [
     {
       tone: 'Warm',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI'm ${d.yourRole || '[your name/major]'} and I'm trying to grow in ${d.field || '[field]'}. I'd love to learn from your experience.\n\nWould you be open to a quick 15–20 minute chat sometime?`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\n${_senderIntro(d)} and I'm trying to grow in ${d.field || '[field]'}. I'd love to learn from your experience.\n\nWould you be open to a quick 15–20 minute chat sometime?`,
     },
   ],
   followup: [
@@ -948,7 +958,7 @@ const _OUTREACH_TEMPLATES = {
   referral: [
     {
       tone: 'Respectful',
-      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI'm applying to ${d.company || '[Company]'} for the ${d.role || '[role]'} position. I'm ${d.yourRole || '[your name/major]'} and I've been working on ${d.field || '[relevant project/skill]'}.\n\nIf you're open to it, would you consider referring me? Totally understand if not — I appreciate your time either way.`,
+      template: (d) => `Hi ${d.recipient || '[Name]'},\n\nI'm applying to ${d.company || '[Company]'} for the ${d.role || '[role]'} position. ${_senderIntro(d)} and I've been working on ${d.field || '[relevant project/skill]'}.\n\nIf you're open to it, would you consider referring me? Totally understand if not — I appreciate your time either way.`,
     },
   ],
 };

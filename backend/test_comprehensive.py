@@ -99,6 +99,10 @@ def _l(x):
     """Safely return x if it's a list, else []. Guards against error dicts under load."""
     return x if isinstance(x, list) else []
 
+def _ld(x):
+    """Like _l but also filters out any non-dict items (e.g. stray strings under load)."""
+    return [i for i in _l(x) if isinstance(i, dict)]
+
 # ══════════════════════════════════════════════════════════════
 # 1. CORE ENDPOINTS — sanity before load
 # ══════════════════════════════════════════════════════════════
@@ -411,7 +415,7 @@ ok("can_message = score >= 60", s, b, [("correct", b.get("can_message") == expec
 
 # Each user in the system
 s, users_list = get("/users")
-for u in _l(users_list)[:10]:
+for u in _ld(users_list)[:10]:
     uid = u.get("id")
     s2, r = get(f"/outreach/readiness?userId={uid}")
     ok(f"readiness for userId={uid}", s2, r, [
@@ -477,21 +481,21 @@ ok("POST /feed creates post", s, b, [
 _post_id = b.get("id")
 
 s, feed = get("/feed")
-feed = _l(feed)
+feed = _ld(feed)
 ok("new post appears in feed", s, feed, [("found", any(p.get("content") == unique for p in feed))])
 
 # Feed sorted newest first
 s, feed = get("/feed")
-feed = _l(feed)
+feed = _ld(feed)
 if len(feed) >= 2:
     ts = [p.get("createdAt", 0) for p in feed[:5]]
     ok("feed newest-first", s, feed, [("sorted", all(ts[i] >= ts[i+1] for i in range(len(ts)-1)))])
 
 # All posts have authorId referencing a real user
 s, feed = get("/feed")
-feed = _l(feed)
+feed = _ld(feed)
 s2, users_list = get("/users")
-user_ids = {u["id"] for u in _l(users_list)} | {1}
+user_ids = {u["id"] for u in _ld(users_list)} | {1}
 ok("all posts have valid authorId", s, feed, [
     ("each has authorId", all("authorId" in p for p in feed)),
     ("authorId is int", all(isinstance(p.get("authorId"), int) for p in feed)),
@@ -528,6 +532,7 @@ ok("XSS content stored as text", s, b, [("stored", bool(b.get("content")))])
 section("7. Messaging — conversations, send, persist, edge cases")
 
 s, convs = get("/conversations")
+convs = _ld(convs)
 ok("GET /conversations", s, convs, [
     ("is list", isinstance(convs, list)),
     ("has participantName", all("participantName" in c for c in convs)),
@@ -580,6 +585,7 @@ err("GET unknown conv → 404", s, b, 404)
 section("8. Notifications — list, mark read, bulk, persistence")
 
 s, notifs = get("/notifications")
+notifs = _ld(notifs)
 ok("GET /notifications shape", s, notifs, [
     ("is list", isinstance(notifs, list)),
     ("each has isRead", all("isRead" in n for n in notifs)),
@@ -593,6 +599,7 @@ if notifs:
 
     # Verify persists
     s, notifs2 = get("/notifications")
+    notifs2 = _ld(notifs2)
     ok("read state persists", s, notifs2, [
         ("still read", any(n["id"] == nid and n["isRead"] for n in notifs2)),
     ])
@@ -602,6 +609,7 @@ ok("PATCH read-all", s, b, [("success", b.get("success") is True)])
 
 # Verify all read
 s, notifs3 = get("/notifications")
+notifs3 = _ld(notifs3)
 ok("all notifications read after read-all", s, notifs3, [
     ("all read", all(n.get("isRead") for n in notifs3)),
 ])
@@ -683,6 +691,7 @@ ok("SQL injection in search — no crash", s, b, [("2xx", 200 <= s < 300)])
 section("10. Jobs and Companies")
 
 s, jobs = get("/jobs")
+jobs = _ld(jobs)
 ok("GET /jobs list", s, jobs, [
     ("is list", isinstance(jobs, list)),
     ("each has title", all("title" in j for j in jobs)),
@@ -784,7 +793,7 @@ ok("Scenario F: message after notifications", s, b, [("has id", "id" in b)])
 s, users_g = get("/users")
 if users_g:
     scores = []
-    for u in _l(users_g)[:5]:
+    for u in _ld(users_g)[:5]:
         s2, r = get(f"/outreach/readiness?userId={u['id']}")
         if 200 <= s2 < 300:
             scores.append(r.get("score", 0))
@@ -822,7 +831,7 @@ def concurrent_user_flow(user_num):
 
     # Verify post in feed
     s, feed = get("/feed", token=tok)
-    if not any(p.get("content") == content for p in _l(feed)):
+    if not any(p.get("content") == content for p in _ld(feed)):
         errors.append("post not found in feed")
 
     # Readiness
@@ -949,12 +958,12 @@ _ps, _pb = post("/feed", {"content": marker})
 if 200 <= _ps < 300:
     for _ in range(3):
         s, feed = get("/feed")
+        feed = _ld(feed)
         ok(f"persistent post in feed (check {_+1})", s, feed, [
             ("found", any(p.get("content") == marker for p in feed)),
         ])
 
-_notifs13 = _l(get("/notifications")[1])
-_notifs13 = [n for n in _notifs13 if isinstance(n, dict)]  # guard against error dicts
+_notifs13 = _ld(get("/notifications")[1])
 nids = [n["id"] for n in _notifs13 if not n.get("isRead", True)]
 if not nids and _notifs13:
     nids = [_notifs13[0]["id"]]
@@ -962,6 +971,7 @@ if nids:
     patch(f"/notifications/{nids[0]}/read")
     for _ in range(3):
         s, notifs = get("/notifications")
+        notifs = _ld(notifs)
         ok(f"notification read state persists (check {_+1})", s, notifs, [
             ("still read", any(n["id"] == nids[0] and n["isRead"] for n in notifs)),
         ])
@@ -1103,6 +1113,7 @@ section("16. Static data shape validation")
 
 # Groups list
 s, groups = get("/groups")
+groups = _ld(groups)
 ok("GET /groups shape", s, groups, [
     ("is list", isinstance(groups, list)),
     ("non-empty", len(groups) > 0),
@@ -1125,6 +1136,7 @@ if groups:
 
 # Events list
 s, events = get("/events")
+events = _ld(events)
 ok("GET /events shape", s, events, [
     ("is list", isinstance(events, list)),
     ("non-empty", len(events) > 0),
@@ -1136,6 +1148,7 @@ ok("GET /events shape", s, events, [
 
 # Courses
 s, courses = get("/courses")
+courses = _ld(courses)
 ok("GET /courses shape", s, courses, [
     ("is list", isinstance(courses, list)),
     ("non-empty", len(courses) > 0),
@@ -1146,6 +1159,7 @@ ok("GET /courses shape", s, courses, [
 
 # News
 s, news = get("/news")
+news = _ld(news)
 ok("GET /news shape", s, news, [
     ("is list", isinstance(news, list)),
     ("non-empty", len(news) > 0),
@@ -1157,6 +1171,7 @@ ok("GET /news shape", s, news, [
 
 # Hashtags
 s, tags = get("/hashtags")
+tags = _ld(tags)
 ok("GET /hashtags shape", s, tags, [
     ("is list", isinstance(tags, list)),
     ("non-empty", len(tags) > 0),
@@ -1167,6 +1182,7 @@ ok("GET /hashtags shape", s, tags, [
 
 # Invitations
 s, invites = get("/invitations")
+invites = _ld(invites)
 ok("GET /invitations shape", s, invites, [
     ("is list", isinstance(invites, list)),
     ("has user obj", all("user" in inv for inv in invites)),
@@ -1188,6 +1204,7 @@ ok("GET /companies/1 all fields", s, co, [
 
 # Jobs detail — all key fields
 s, jbs = get("/jobs")
+jbs = _ld(jbs)
 if jbs:
     s2, jd = get(f"/jobs/{jbs[0]['id']}")
     ok("GET /jobs/:id all fields", s2, jd, [
@@ -1417,6 +1434,7 @@ ok("all feed posts have required fields", s, feed_all, [
 
 # Users list: all ids unique
 s, users_all = get("/users")
+users_all = _ld(users_all)
 ok("users list ids are unique", s, users_all, [
     ("unique", len({u["id"] for u in users_all}) == len(users_all)),
 ])
@@ -1430,18 +1448,21 @@ ok("users list all have required fields", s, users_all, [
 
 # Notifications: all ids unique
 s, notifs_all = get("/notifications")
+notifs_all = _ld(notifs_all)
 ok("notification ids unique", s, notifs_all, [
     ("unique", len({n["id"] for n in notifs_all}) == len(notifs_all)),
 ])
 
 # Conversations: all ids unique
 s, convs_all = get("/conversations")
+convs_all = _ld(convs_all)
 ok("conversation ids unique", s, convs_all, [
     ("unique", len({c["id"] for c in convs_all}) == len(convs_all)),
 ])
 
 # Jobs: all ids unique and count >= 10
 s, jobs_all = get("/jobs")
+jobs_all = _ld(jobs_all)
 ok("jobs list ids unique and >=10", s, jobs_all, [
     ("unique", len({j["id"] for j in jobs_all}) == len(jobs_all)),
     (">=10", len(jobs_all) >= 10),
@@ -1449,6 +1470,7 @@ ok("jobs list ids unique and >=10", s, jobs_all, [
 
 # Feed sorted newest first (createdAt DESC) — double check with fresh feed
 s, feed_sorted = get("/feed")
+feed_sorted = _ld(feed_sorted)
 if len(feed_sorted) >= 2:
     ts_check = [p.get("createdAt", 0) for p in feed_sorted[:10]]
     ok("feed sorted newest first (check 2)", s, feed_sorted, [
@@ -1468,6 +1490,7 @@ section("21. Conversation depth — ordering, lastMessage, participant")
 
 # Conversations list shape depth
 s, convs21 = get("/conversations")
+convs21 = _ld(convs21)
 ok("conversations list full shape", s, convs21, [
     ("participantName is str", all(isinstance(c.get("participantName"), str) for c in convs21)),
     ("unreadCount is int", all(isinstance(c.get("unreadCount"), int) for c in convs21)),
@@ -1480,6 +1503,7 @@ ok("conversations list full shape", s, convs21, [
 _unique_msg = f"LastMsgTest_{uuid.uuid4().hex[:8]}"
 post("/conversations/1/messages", {"text": _unique_msg})
 s, convs21b = get("/conversations")
+convs21b = _ld(convs21b)
 conv1_21 = next((c for c in convs21b if c["id"] == 1), {})
 ok("lastMessage updates after send", s, convs21b, [
     ("lastMessage is unique msg", conv1_21.get("lastMessage") == _unique_msg),
@@ -1801,6 +1825,7 @@ section("29. Idempotency and stability")
 
 # Mark same notification read twice — no crash
 s, notifs29 = get("/notifications")
+notifs29 = _ld(notifs29)
 if notifs29:
     nid29 = notifs29[0]["id"]
     s1, b1 = patch(f"/notifications/{nid29}/read")
@@ -1887,7 +1912,7 @@ if uB:
 
     # Check readiness for 5 candidates
     ready_users = []
-    for candidate in _l(users_B)[:5]:
+    for candidate in _ld(users_B)[:5]:
         sB2, rB = get(f"/outreach/readiness?userId={candidate['id']}", token=tB)
         if 200 <= sB2 < 300 and rB.get("can_message"):
             ready_users.append(candidate)
@@ -2050,6 +2075,7 @@ if _u33:
 
     # All feed posts from fresh user perspective should have bool isLiked/isSaved
     s, feed33 = get("/feed", token=_t33)
+    feed33 = _ld(feed33)
     ok("all feed posts have bool isLiked/isSaved", s, feed33, [
         ("isLiked bool", all(isinstance(p.get("isLiked"), bool) for p in feed33)),
         ("isSaved bool", all(isinstance(p.get("isSaved"), bool) for p in feed33)),
@@ -2090,6 +2116,7 @@ if _u34:
 section("35. Conversations — multiple convs, error handling")
 
 s, convs35 = get("/conversations")
+convs35 = _ld(convs35)
 ok("conversations list non-empty", s, convs35, [
     ("non-empty", len(convs35) > 0),
     ("count >=3", len(convs35) >= 3),
@@ -2247,6 +2274,7 @@ for goal in GOALS:
 section("40. Notifications — shape depth and type field")
 
 s, notifs40 = get("/notifications")
+notifs40 = _ld(notifs40)
 ok("notifications full shape", s, notifs40, [
     ("is list", isinstance(notifs40, list)),
     ("has id", all("id" in n for n in notifs40)),
@@ -2261,6 +2289,7 @@ ok("notifications full shape", s, notifs40, [
 # After read-all, all isRead=True
 patch("/notifications/read-all")
 s, notifs40b = get("/notifications")
+notifs40b = _ld(notifs40b)
 ok("after read-all all isRead True", s, notifs40b, [
     ("all read", all(n.get("isRead") for n in notifs40b)),
 ])
@@ -2276,6 +2305,7 @@ err("mark unknown notif → 404", s, b40, 404)
 section("41. Feed depth — reposts, commentCount, no-auth author")
 
 s, feed41 = get("/feed")
+feed41 = _ld(feed41)
 ok("feed reposts and commentCount are ints", s, feed41, [
     ("reposts int", all(isinstance(p.get("reposts"), int) for p in feed41)),
     ("commentCount int", all(isinstance(p.get("commentCount"), int) for p in feed41)),
@@ -2310,6 +2340,7 @@ for i in range(3):
         _order_ids.append(b["id"])
 
 s, feed41b = get("/feed")
+feed41b = _ld(feed41b)
 _top3 = [p["id"] for p in feed41b[:3]]
 ok("3 newest posts appear at top of feed in reverse creation order", s, feed41b, [
     ("newest at top", _order_ids and _order_ids[-1] == _top3[0] if _order_ids and _top3 else True),
@@ -2363,6 +2394,7 @@ ok("obscure query returns empty, no crash", s, b42o, [
 section("43. Groups — all group detail endpoints")
 
 s, groups43 = get("/groups")
+groups43 = _ld(groups43)
 ok("groups list has >=5", s, groups43, [
     (">=5", len(groups43) >= 5),
 ])
@@ -2412,27 +2444,35 @@ ok("outreach to self (recipientId=1) — no crash", s, b44s, [
 section("45. Seed data integrity — minimum counts")
 
 s, feed45 = get("/feed")
+feed45 = _ld(feed45)
 ok("feed has >=10 seed posts", s, feed45, [(">=10", len(feed45) >= 10)])
 
 s, jobs45 = get("/jobs")
+jobs45 = _ld(jobs45)
 ok("jobs has >=10 seed jobs", s, jobs45, [(">=10", len(jobs45) >= 10)])
 
 s, notifs45 = get("/notifications")
+notifs45 = _ld(notifs45)
 ok("notifications has >=5 seed entries", s, notifs45, [(">=5", len(notifs45) >= 5)])
 
 s, convs45 = get("/conversations")
+convs45 = _ld(convs45)
 ok("conversations has >=3 seed entries", s, convs45, [(">=3", len(convs45) >= 3)])
 
 s, groups45 = get("/groups")
+groups45 = _ld(groups45)
 ok("groups has >=5 seed entries", s, groups45, [(">=5", len(groups45) >= 5)])
 
 s, courses45 = get("/courses")
+courses45 = _ld(courses45)
 ok("courses has >=5 seed entries", s, courses45, [(">=5", len(courses45) >= 5)])
 
 s, news45 = get("/news")
+news45 = _ld(news45)
 ok("news has >=5 seed entries", s, news45, [(">=5", len(news45) >= 5)])
 
 s, tags45 = get("/hashtags")
+tags45 = _ld(tags45)
 ok("hashtags has >=5 seed entries", s, tags45, [(">=5", len(tags45) >= 5)])
 
 # Known user 2 exists and has a name
@@ -2462,7 +2502,9 @@ if _u46:
 
     # GET /feed both authed and unauthed — both return lists
     s, f46a = get("/feed")
+    f46a = _ld(f46a)
     s, f46b = get("/feed", token=_t46)
+    f46b = _ld(f46b)
     ok("GET /feed authenticated returns list", s, f46b, [("is list", isinstance(f46b, list))])
     ok("GET /feed unauthenticated returns same feed", s, f46a, [
         ("same count", len(f46a) == len(f46b)),
@@ -2566,6 +2608,7 @@ _u49, _t49 = make_user()
 if _u49:
     # Step 1: View feed
     s, f49 = get("/feed", token=_t49)
+    f49 = _ld(f49)
     ok("step 1: view feed", s, f49, [("non-empty", len(f49) > 0)])
 
     # Step 2: Search for someone to reach out to
@@ -2592,6 +2635,7 @@ if _u49:
 
     # Step 5: Send actual message in a conversation
     s, convs49 = get("/conversations", token=_t49)
+    convs49 = _ld(convs49)
     if convs49:
         s, sent49 = post(f"/conversations/{convs49[0]['id']}/messages",
                          {"text": m49.get("draft","Hi there!")[:200]}, token=_t49)

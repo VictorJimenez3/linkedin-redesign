@@ -293,7 +293,7 @@ function NavBar() {
                   type="button"
                   className="li-dropdown__item"
                   role="menuitem"
-                  onClick={() => { window.location.href = 'index.html'; }}
+                  onClick={() => { localStorage.removeItem('nx-token'); localStorage.removeItem('nx-uid'); window.location.href = 'index.html'; }}
                 >
                   Sign out
                 </button>

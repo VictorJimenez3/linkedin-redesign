@@ -43,6 +43,7 @@ function FeedPage() {
       authorTitle: u.headline,
       content,
       createdAt: Date.now(),
+      timestamp: Date.now(),
       likeCount: 0,
       commentCount: 0,
       repostCount: 0,

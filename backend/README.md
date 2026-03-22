@@ -67,7 +67,7 @@ App:  http://localhost:5000/
 API:  http://localhost:5000/api/
 ```
 
-Open `index.html` in a browser to reach the login/signup page, or `app.html` directly if you already have a session token stored.
+Visit **http://localhost:5000** in a browser to reach the login/signup page, or **http://localhost:5000/app.html** directly if you already have a session token stored.
 
 ---
 
@@ -185,7 +185,7 @@ python3 backend/app.py
 python3 backend/test_api.py
 
 # Terminal 2 — run frontend contract tests (verifies API shapes match UI expectations)
-python backend/test_frontend_contract.py
+python3 backend/test_frontend_contract.py
 ```
 
 Tests use only Python stdlib (`urllib`, `json`) — no pytest or requests needed.

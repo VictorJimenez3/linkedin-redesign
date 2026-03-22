@@ -71,6 +71,19 @@ Open `index.html` in a browser to reach the login/signup page, or `app.html` dir
 
 ---
 
+## Login
+
+Use the demo account to log in immediately:
+
+| Field | Value |
+|---|---|
+| Email | `alex.johnson@gmail.com` |
+| Password | `password123` |
+
+Or register a new account via the "Join now" link on the landing page.
+
+---
+
 ## Stop
 
 Press `Ctrl-C` in the terminal running `app.py`.

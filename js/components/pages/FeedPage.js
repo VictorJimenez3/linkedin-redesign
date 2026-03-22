@@ -137,6 +137,7 @@ function FeedPage() {
               openModal={openModal}
               showToast={showToast}
               currentUser={u}
+              onDelete={id => setLocalPosts(prev => prev.filter(p => p.id !== id))}
             />
             {/* Sponsored posts interspersed */}
             {(i === 1 || i === 3) && (
@@ -329,7 +330,7 @@ function SponsoredPost({ ad, showToast }) {
 }
 
 /* ── FeedPost ────────────────────────────────────────────── */
-function FeedPost({ post, liked, onLike, commentsOpen, onToggleComments, following, onFollow, openModal, showToast, currentUser }) {
+function FeedPost({ post, liked, onLike, commentsOpen, onToggleComments, following, onFollow, openModal, showToast, currentUser, onDelete }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [reactionHover, setReactionHover] = React.useState(false);
   const [reactionTimer, setReactionTimer] = React.useState(null);
@@ -433,11 +434,16 @@ function FeedPost({ post, liked, onLike, commentsOpen, onToggleComments, followi
             </button>
             {menuOpen && (
               <div className="li-dropdown" style={{ display: 'block', position: 'absolute', top: '100%', right: 0, minWidth: 200, zIndex: 100 }}>
-                {['Save post', 'Copy link to post', 'Not interested', 'Report post'].map(label => (
+                {[
+                  ...(currentUser && (post.authorId === currentUser.id || post.authorId === String(currentUser.id)) ? ['Delete post'] : []),
+                  'Save post', 'Copy link to post', 'Not interested', 'Report post'
+                ].map(label => (
                   <div key={label} className="li-dropdown__item"
+                    style={label === 'Delete post' ? { color: 'var(--red)' } : {}}
                     onClick={() => {
                       setMenuOpen(false);
-                      if (label === 'Report post') openModal('report', { post });
+                      if (label === 'Delete post') { onDelete && onDelete(post.id); showToast('Post deleted'); }
+                      else if (label === 'Report post') openModal('report', { post });
                       else showToast(label);
                     }}>
                     {label}

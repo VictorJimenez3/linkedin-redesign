@@ -36,7 +36,7 @@ function EventsPage() {
   }
 
   return (
-    <div className="li-page-inner" style={{ maxWidth: 900 }}>
+    <div className="li-page-inner" style={{ maxWidth: 900, flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700 }}>Events</h1>

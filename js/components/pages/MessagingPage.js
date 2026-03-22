@@ -12,6 +12,7 @@ function MessagingPage() {
   const [messages, setMessages] = React.useState([]);
   const [msgLoading, setMsgLoading] = React.useState(false);
   const [draft, setDraft] = React.useState('');
+  const [lastMsgOverrides, setLastMsgOverrides] = React.useState({});
   const [search, setSearch] = React.useState('');
   const messagesEndRef = React.useRef(null);
   const currentUserRef = React.useRef(currentUser);
@@ -80,6 +81,7 @@ function MessagingPage() {
       isMe: true,
     };
     setMessages(prev => [...prev, newMsg]);
+    setLastMsgOverrides(prev => ({ ...prev, [selectedId]: text }));
 
     API.sendMessage(selectedId, text).catch(() => {
       showToast('Failed to send message', 'error');
@@ -389,7 +391,7 @@ function MessagingPage() {
                 }}
               >
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{c.participant?.name || c.participantName || 'Unknown'}</div>
-                <div style={{ color: 'var(--text-3)', fontSize: 12, marginTop: 2 }}>{c.lastMessage || ''}</div>
+                <div style={{ color: 'var(--text-3)', fontSize: 12, marginTop: 2 }}>{lastMsgOverrides[c.id] !== undefined ? lastMsgOverrides[c.id] : (c.lastMessage || '')}</div>
               </button>
             ))}
           </div>

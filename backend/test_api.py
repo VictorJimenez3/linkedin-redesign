@@ -8,8 +8,8 @@ Nexus API Test Suite  — backend/test_api.py
 Covers:
   - All existing endpoints (GET/POST/PATCH)
   - Bug fixes (profile-readiness shape, search companies)
-  - Story #1 — Outreach Message (T1.1-T1.6)
-  - Story #7 — Outreach Readiness (T7.1-T7.7)
+  - Story #1 (Outreach Message Guidance) — T1.1-T1.6
+  - Story #7 (Outreach Readiness Check) — T7.1-T7.7
   - Account CRUD (register, delete user, cascade)
   - Persistence (data survives across multiple reads)
   - Security / input validation edge cases
@@ -487,7 +487,7 @@ if notif and isinstance(notif, list):
 # 4. STORY #1 — Outreach Message Guidance
 # ══════════════════════════════════════════════════════════════
 
-section("Story #1 — POST /api/outreach/generate")
+section("Story #1 (Outreach Message Guidance) — POST /api/outreach/generate")
 
 # T1.1  Valid full request
 s, b = post("/outreach/generate", {"recipientId": 5, "tone": "friendly", "goal": "networking"})
@@ -530,7 +530,7 @@ ok("T1.6  draft <= 500 chars", s, b, [
 # 5. STORY #7 — Outreach Readiness Check
 # ══════════════════════════════════════════════════════════════
 
-section("Story #7 — GET /api/outreach/readiness")
+section("Story #7 (Outreach Readiness Check) — GET /api/outreach/readiness")
 
 # T7.1  Current user (complete profile) -> ready
 s, b = get("/outreach/readiness")

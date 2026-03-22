@@ -414,7 +414,7 @@ def get_profile_readiness():
 
 
 # ══════════════════════════════════════════════════════════════
-# Outreach — Story #1  (NX.API.3)
+# Outreach — Story #1 (Outreach Message Guidance)  (NX.API.3)
 # ══════════════════════════════════════════════════════════════
 
 @app.route("/api/outreach/generate", methods=["POST"])
@@ -464,7 +464,7 @@ def outreach_generate():
 
 
 # ══════════════════════════════════════════════════════════════
-# Outreach — Story #7  (NX.API.4)
+# Outreach — Story #7 (Outreach Readiness Check)  (NX.API.4)
 # ══════════════════════════════════════════════════════════════
 
 @app.route("/api/outreach/readiness")

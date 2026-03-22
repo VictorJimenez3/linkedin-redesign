@@ -81,7 +81,7 @@
     // ── Profile Readiness ─────────────────────────────────────
     getProfileReadiness: () => request('GET', '/profile-readiness'),
 
-    // ── Outreach (Stories #1 & #7) ────────────────────────────
+    // ── Outreach (Story #1: Outreach Message Guidance  |  Story #7: Outreach Readiness Check) ──
     generateOutreachMessage: (recipientId, tone, goal, customNote, details) =>
       request('POST', '/outreach/generate', { recipientId, tone, goal, custom_note: customNote, details: details || {} }),
     getOutreachReadiness: (userId) =>

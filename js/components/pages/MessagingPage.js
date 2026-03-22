@@ -104,7 +104,7 @@ function MessagingPage() {
     setReadinessLoading(true);
     setReadinessError(null);
     try {
-      // Story #7 — primary: outreach readiness endpoint
+      // Story #7 (Outreach Readiness Check) — primary: outreach readiness endpoint
       const data = await API.getOutreachReadiness();
       setReadiness(_transformOutreachReadiness(data));
       if (refresh) showToast('Score refreshed', 'success');
@@ -846,7 +846,7 @@ function mockBackendGetProfileReadiness(user, opts = {}) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Backend goal/tone mapping (Story #1)
+   Backend goal/tone mapping (Story #1 — Outreach Message Guidance)
    Maps frontend goal keys → backend goal enum + tone enum
    ───────────────────────────────────────────────────────────── */
 const _GOAL_BACKEND_MAP = {

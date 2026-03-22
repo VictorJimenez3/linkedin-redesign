@@ -264,7 +264,7 @@ for uid, tok in lifecycle_users:
 # 4. STORY #1 — Outreach Generate: all goals × all tones × scenarios
 # ══════════════════════════════════════════════════════════════
 
-section("4. Story #1 — Outreach Generate: all goals × tones × scenarios")
+section("4. Story #1 (Outreach Message Guidance) — Outreach Generate: all goals × tones × scenarios")
 
 GOALS = ["job_inquiry", "networking", "advice", "collaboration"]
 TONES = ["professional", "friendly", "formal"]
@@ -380,10 +380,10 @@ for goal in GOALS:
     ])
 
 # ══════════════════════════════════════════════════════════════
-# 5. STORY #7 — Readiness Check: levels, thresholds, per-user
+# 5. STORY #7 (Outreach Readiness Check) — levels, thresholds, per-user
 # ══════════════════════════════════════════════════════════════
 
-section("5. Story #7 — Outreach Readiness: all users, levels, breakdown")
+section("5. Story #7 (Outreach Readiness Check) — Outreach Readiness: all users, levels, breakdown")
 
 # Current user (complete profile → ready)
 s, b = get("/outreach/readiness")

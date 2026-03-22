@@ -54,7 +54,7 @@ _TIPS = {
     ],
 }
 
-# 9 weighted criteria — AC-1 (Story #7)
+# 9 weighted criteria — AC-1 (Story #7 — Outreach Readiness Check)
 _OUTREACH_CHECKS = [
     {
         "key": "experience", "label": "Has at least one role", "weight": 20,
@@ -138,7 +138,7 @@ def _call_ai(prompt):
 
 def generate_outreach_message(sender, recipient, context):
     """
-    NX.API.3 — Story #1
+    NX.API.3 — Story #1 (Outreach Message Guidance)
     Build a personalised outreach draft plus tips and alternative openers.
 
     Args:
@@ -208,7 +208,7 @@ def generate_outreach_message(sender, recipient, context):
 
 def compute_outreach_readiness(user):
     """
-    NX.API.4 — Story #7
+    NX.API.4 — Story #7 (Outreach Readiness Check)
     Score a user's profile completeness against 9 weighted criteria.
 
     Args:

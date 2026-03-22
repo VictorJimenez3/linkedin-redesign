@@ -1,7 +1,7 @@
 # Nexus Backend
 
 Flask + SQLite REST API powering the Nexus professional-network SPA.
-Implements **User Story #1** (Outreach Message Guidance) and **User Story #7** (Outreach Readiness Check).
+Implements **User Story #1** (Outreach Message Guidance) and **User Story #2** (Outreach Readiness Check).
 
 ---
 
@@ -158,7 +158,7 @@ Authenticated requests must include `Authorization: Bearer <token>` header. Unau
 `goal` ∈ `{job_inquiry, networking, advice, collaboration}` (default: `networking`)
 `details` object keys: `recipient`, `yourRole`, `field`, `company`, `role`, `context`
 
-### User Story #7 — Outreach Readiness Check
+### User Story #2 — Outreach Readiness Check
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/outreach/readiness` | Profile readiness for current user |
@@ -193,7 +193,7 @@ Tests use only Python stdlib (`urllib`, `json`) — no pytest or requests needed
 ### Test coverage (`backend/test_api.py`)
 - All GET/POST/PATCH endpoints
 - User Story #1 — T1.1–T1.6 (outreach generate)
-- User Story #7 — T7.1–T7.7 (outreach readiness)
+- User Story #2 — T7.1–T7.7 (outreach readiness)
 - Auth — register, login, token-authenticated requests
 - Account CRUD — create, find, delete
 - Input validation and security edge cases (XSS, SQL injection strings, control characters)

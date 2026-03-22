@@ -42,8 +42,8 @@ All mutable data is stored in SQLite (`backend/nexus.db`) with:
 Run with the backend on `http://localhost:5000`:
 
 ```bash
-python backend/app.py   # in one terminal
-python backend/test_api.py
+python3 backend/app.py   # in one terminal
+python3 backend/test_api.py
 ```
 
 ### 2.1 Test Categories
@@ -60,13 +60,13 @@ python backend/test_api.py
 | **Persistence** | New post appears in feed; notification read state persists |
 | **Account CRUD** | Register (201, no password in response), duplicate email → 409, validation (name, email, password), GET/DELETE user, delete → 404, cannot delete user 1 → 403 |
 | **Story #1 Outreach** | Valid generate, missing/unknown recipientId, invalid tone fallback, custom_note in draft, draft ≤ 500 chars |
-| **Story #7 Outreach** | Readiness score/level/can_message/breakdown/top_tips, unknown userId → 404, top_tips ≤ 3, breakdown 9 items |
+| **Story #2 Outreach** | Readiness score/level/can_message/breakdown/top_tips, unknown userId → 404, top_tips ≤ 3, breakdown 9 items |
 | **Security / input** | XSS in custom_note, SQL-injection-like string, negative/float/string/boolean/zero recipientId, long custom_note truncated, negative/non-integer userId, control chars stripped, malicious goal default |
 | **Register edge cases** | Empty body, empty name, malformed email, short password, XSS in name (accepted; sanitize on output) |
 
-### 2.2 Test Count (Approximate)
+### 2.2 Test Count
 
-Roughly **90+** test cases covering success paths, validation, 400/404/409/403, persistence, and security.
+**89** test cases covering success paths, validation, 400/404/409/403, persistence, and security.
 
 ---
 
@@ -77,7 +77,7 @@ These tests call the same endpoints the frontend uses (as in `js/api.js`) and as
 Run:
 
 ```bash
-python backend/test_frontend_contract.py
+python3 backend/test_frontend_contract.py
 ```
 
 ### 3.1 Contract Coverage
@@ -103,16 +103,16 @@ If a contract test fails, the **backend response shape** no longer matches what 
 
 ## 4. How to Run All Tests and Re-check
 
-1. **Start backend:**  
-   `python backend/app.py`  
+1. **Start backend:**
+   `python3 backend/app.py`
    (ensure nothing else is using port 5000).
 
-2. **Backend API tests:**  
-   `python backend/test_api.py`  
+2. **Backend API tests:**
+   `python3 backend/test_api.py`
    Exit code 0 = all passed.
 
-3. **Frontend contract tests:**  
-   `python backend/test_frontend_contract.py`  
+3. **Frontend contract tests:**
+   `python3 backend/test_frontend_contract.py`
    Exit code 0 = all passed.
 
 4. **Manual frontend check:**  

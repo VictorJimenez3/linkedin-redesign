@@ -107,3 +107,73 @@ Full reference in [backend/README.md](backend/README.md).
 | POST | `/api/conversations/:id/messages` | Send message |
 | POST | `/api/outreach/generate` | **Story #1** — generate outreach draft |
 | GET | `/api/outreach/readiness` | **Story #2** — profile readiness score |
+
+
+
+# Testing — P5 
+
+# Running Frontend Tests — MessagingPage.js
+
+## Prerequisites
+
+Make sure you have the following installed before running the tests:
+
+- **Node.js** v18 or higher — https://nodejs.org
+- **npm** (comes bundled with Node.js)
+
+## Install Dependencies
+
+From the root of the frontend directory, run:
+
+```bash
+npm install
+```
+
+This will install all required packages, including:
+
+- `jest` — the test runner and assertion framework
+- `@testing-library/react` — renders React components in a simulated browser environment
+- `@testing-library/jest-dom` — adds custom matchers like `toBeInTheDocument()`
+- `babel-jest` + React/JSX preset — allows Jest to parse JSX syntax
+
+If any of these are missing, install them manually:
+
+```bash
+npm install --save-dev jest @testing-library/react @testing-library/jest-dom babel-jest @babel/preset-env @babel/preset-react
+```
+
+## Running the Tests
+
+To run the full test suite once and see results in the terminal:
+
+```bash
+npx jest --watchAll=false
+```
+
+To run tests and generate a code coverage report:
+
+```bash
+npx jest --coverage --watchAll=false
+```
+
+The coverage report will print to the terminal and also be saved to the `coverage/` folder as an HTML report you can open in a browser:
+
+```bash
+open coverage/lcov-report/index.html
+```
+
+## Test File Location
+
+```
+tests/MessagingPage_test.js
+```
+
+## What Is Being Tested
+
+This test file covers `js/components/pages/MessagingPage.js`, including:
+
+- Conversation loading and auto-selection
+- Sending messages (optimistic updates, trimming, error handling)
+- Profile Readiness panel (loading states, API success/failure, refresh)
+- Outreach Guide panel (goal selection, step navigation, variant cycling, message insertion)
+- Pure functions: `computeGuidePreview` and `mockBackendGetProfileReadiness`

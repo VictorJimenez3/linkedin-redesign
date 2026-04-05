@@ -1,6 +1,6 @@
 # Nexus — LinkedIn Redesign
 **CS485 AI-Assisted Software Engineering — Spring 2026**
-Team: Krishi Shah, Dhyani Shah
+Team: Krishi Shah, Dhyani Shah, Saanvi Elaty, Victor Jimenez 
 
 A LinkedIn-style professional networking SPA built with vanilla JavaScript + React (CDN), backed by a Flask + SQLite REST API.
 
@@ -35,15 +35,7 @@ Visit **http://localhost:5000** in your browser.
 
 ## Running the Tests
 
-The backend must be running first.
-
-```bash
-# Unit + user story tests (89 tests)
-python3 backend/test_api.py
-
-# Frontend API contract tests
-python3 backend/test_frontend_contract.py
-```
+See the **Testing** section below for full instructions on running frontend and backend unit tests locally.
 
 ---
 
@@ -110,70 +102,115 @@ Full reference in [backend/README.md](backend/README.md).
 
 
 
-# Testing — P5 
+---
 
-# Running Frontend Tests — MessagingPage.js
+## Testing
 
-## Prerequisites
+### Frontend Unit Tests
 
-Make sure you have the following installed before running the tests:
+**Framework:** Jest + React Testing Library (jsdom)
+
+**Files under test:**
+- `js/components/pages/FeedPage.js` — 61 tests
+- `js/components/pages/MessagingPage.js`
+
+**Test files:**
+- `tests/tests/test-files/FeedPage.test.js`
+- `tests/tests/test-files/MessagingPage.test.js`
+
+#### Prerequisites
 
 - **Node.js** v18 or higher — https://nodejs.org
 - **npm** (comes bundled with Node.js)
 
-## Install Dependencies
+No running backend required — all API calls are mocked.
 
-From the root of the frontend directory, run:
+#### Install dependencies
+
+From the repo root:
 
 ```bash
 npm install
 ```
 
-This will install all required packages, including:
+This installs:
+- `jest` — test runner and assertion framework
+- `@testing-library/react` — renders React components in jsdom
+- `@testing-library/jest-dom` — matchers like `toBeInTheDocument()`
+- `babel-jest`, `@babel/preset-env`, `@babel/preset-react` — JSX transformation
+- `jest-environment-jsdom` — browser-like environment for Node
 
-- `jest` — the test runner and assertion framework
-- `@testing-library/react` — renders React components in a simulated browser environment
-- `@testing-library/jest-dom` — adds custom matchers like `toBeInTheDocument()`
-- `babel-jest` + React/JSX preset — allows Jest to parse JSX syntax
-
-If any of these are missing, install them manually:
-
-```bash
-npm install --save-dev jest @testing-library/react @testing-library/jest-dom babel-jest @babel/preset-env @babel/preset-react
-```
-
-## Running the Tests
-
-To run the full test suite once and see results in the terminal:
+#### Run all frontend tests
 
 ```bash
-npx jest --watchAll=false
+npm test
 ```
 
-To run tests and generate a code coverage report:
+#### Run a specific test file
 
 ```bash
-npx jest --coverage --watchAll=false
+npx jest FeedPage
+npx jest MessagingPage
 ```
 
-The coverage report will print to the terminal and also be saved to the `coverage/` folder as an HTML report you can open in a browser:
+#### Run with coverage report
 
 ```bash
-open coverage/lcov-report/index.html
+npm run test:coverage
 ```
 
-## Test File Location
+Coverage report prints to the terminal. An HTML version is saved to `coverage/lcov-report/index.html`.
 
+---
+
+### Backend Unit Tests
+
+**Framework:** pytest
+
+**Files under test:**
+- `backend/database.py` — 86 tests
+- `backend/app.py` — 83 tests
+
+**Test files:**
+- `tests/tests/test-files/test_database.py`
+- `tests/tests/test-files/test_app.py`
+
+**Test specs:**
+- `tests/tests/test-specifications/test_spec_database.md`
+- `tests/tests/test-specifications/test_spec_app.md`
+
+#### Prerequisites
+
+- **Python 3.10+**
+- **pip**
+
+No running backend required — `test_database.py` uses an in-memory SQLite DB and `test_app.py` mocks all database/outreach calls via `monkeypatch`.
+
+#### Install dependencies
+
+```bash
+pip3 install -r backend/requirements.txt
+pip3 install pytest pytest-cov
 ```
-tests/MessagingPage_test.js
+
+#### Run database tests
+
+```bash
+cd backend
+pytest tests/test_database.py -v
 ```
 
-## What Is Being Tested
+#### Run app/route tests
 
-This test file covers `js/components/pages/MessagingPage.js`, including:
+```bash
+cd backend
+pytest tests/test_app.py -v
+```
 
-- Conversation loading and auto-selection
-- Sending messages (optimistic updates, trimming, error handling)
-- Profile Readiness panel (loading states, API success/failure, refresh)
-- Outreach Guide panel (goal selection, step navigation, variant cycling, message insertion)
-- Pure functions: `computeGuidePreview` and `mockBackendGetProfileReadiness`
+#### Run with coverage report
+
+```bash
+cd backend
+pytest tests/test_database.py --cov=database --cov-report=term-missing
+pytest tests/test_app.py --cov=app --cov-report=term-missing
+```

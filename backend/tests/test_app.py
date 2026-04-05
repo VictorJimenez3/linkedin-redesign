@@ -19,7 +19,7 @@ import sys
 import pytest
 
 # ── Path setup ────────────────────────────────────────────────────────────────
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "backend"))
 
 # Patch init_db to a no-op BEFORE importing app (it runs at module level)
 import database as _db

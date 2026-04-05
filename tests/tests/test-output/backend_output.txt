@@ -1,0 +1,140 @@
+================================================================
+BACKEND TEST OUTPUT
+Generated: Sun Apr  5 13:38:57 EDT 2026
+================================================================
+
+================================================================
+TEST SUITE 1: database.py  (86 tests)
+================================================================
+============================= test session starts ==============================
+platform darwin -- Python 3.14.1, pytest-9.0.2, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.14/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/krishishah/Desktop/NJIT/CS485/Linkedin Redesign
+plugins: cov-7.1.0
+collecting ... collected 86 items
+INTERNALERROR> Traceback (most recent call last):
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/_pytest/main.py", line 318, in wrap_session
+INTERNALERROR>     session.exitstatus = doit(config, session) or 0
+INTERNALERROR>                          ~~~~^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/_pytest/main.py", line 372, in _main
+INTERNALERROR>     config.hook.pytest_runtestloop(session=session)
+INTERNALERROR>     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_hooks.py", line 512, in __call__
+INTERNALERROR>     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+INTERNALERROR>            ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_manager.py", line 120, in _hookexec
+INTERNALERROR>     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR>            ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_callers.py", line 167, in _multicall
+INTERNALERROR>     raise exception
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>     ~~~~~~~~~~~~~~^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/_pytest/logging.py", line 801, in pytest_runtestloop
+INTERNALERROR>     return (yield)  # Run all the tests.
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>     ~~~~~~~~~~~~~~^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/_pytest/terminal.py", line 707, in pytest_runtestloop
+INTERNALERROR>     result = yield
+INTERNALERROR>              ^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_callers.py", line 116, in _multicall
+INTERNALERROR>     next(function_gen)  # first yield
+INTERNALERROR>     ~~~~^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pytest_cov/plugin.py", line 340, in pytest_runtestloop
+INTERNALERROR>     from coverage.exceptions import CoverageWarning
+INTERNALERROR> ModuleNotFoundError: No module named 'coverage.exceptions'
+
+============================== 1 warning in 0.08s ==============================
+
+================================================================
+TEST SUITE 2: app.py  (83 tests)
+================================================================
+============================= test session starts ==============================
+platform darwin -- Python 3.14.1, pytest-9.0.2, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.14/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/krishishah/Desktop/NJIT/CS485/Linkedin Redesign
+plugins: cov-7.1.0
+collecting ... collected 83 items
+INTERNALERROR> Traceback (most recent call last):
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/_pytest/main.py", line 318, in wrap_session
+INTERNALERROR>     session.exitstatus = doit(config, session) or 0
+INTERNALERROR>                          ~~~~^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/_pytest/main.py", line 372, in _main
+INTERNALERROR>     config.hook.pytest_runtestloop(session=session)
+INTERNALERROR>     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_hooks.py", line 512, in __call__
+INTERNALERROR>     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+INTERNALERROR>            ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_manager.py", line 120, in _hookexec
+INTERNALERROR>     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR>            ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_callers.py", line 167, in _multicall
+INTERNALERROR>     raise exception
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>     ~~~~~~~~~~~~~~^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/_pytest/logging.py", line 801, in pytest_runtestloop
+INTERNALERROR>     return (yield)  # Run all the tests.
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>     ~~~~~~~~~~~~~~^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/_pytest/terminal.py", line 707, in pytest_runtestloop
+INTERNALERROR>     result = yield
+INTERNALERROR>              ^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pluggy/_callers.py", line 116, in _multicall
+INTERNALERROR>     next(function_gen)  # first yield
+INTERNALERROR>     ~~~~^^^^^^^^^^^^^^
+INTERNALERROR>   File "/opt/homebrew/lib/python3.14/site-packages/pytest_cov/plugin.py", line 340, in pytest_runtestloop
+INTERNALERROR>     from coverage.exceptions import CoverageWarning
+INTERNALERROR> ModuleNotFoundError: No module named 'coverage.exceptions'
+
+============================== 1 warning in 0.21s ==============================
+
+================================================================
+MUTATION ANALYSIS
+================================================================
+
+============================================================
+Mutation Testing: database.py
+Test file:        test_database.py
+============================================================
+  [KILLED  ] hash_pw: sha256 -> sha512
+  [KILLED  ] ts: return 0 instead of real timestamp
+  [KILLED  ] verify: return None on valid match
+  [KILLED  ] get_session: return None from cache
+  [KILLED  ] get_session: return None from db
+  [KILLED  ] create_user: skip password hash
+  [KILLED  ] delete_user: wrong protected id guard
+  [KILLED  ] posts: ascending instead of descending
+  [KILLED  ] mark_read: set is_read=0
+  [KILLED  ] mark_all_read: only mark one row
+
+Results: 10 killed / 0 survived / 0 skipped / 10 total
+Mutation score: 100.0%
+
+============================================================
+Mutation Testing: app.py
+Test file:        test_app.py
+============================================================
+  [KILLED  ] login: skip email required check
+  [KILLED  ] register: allow short passwords
+  [KILLED  ] update_me: invert empty-update guard
+  [KILLED  ] create_post: allow blank content
+  [KILLED  ] send_message: allow blank text
+  [KILLED  ] outreach: allow non-positive id
+  [KILLED  ] profile_readiness: break score sum
+  [KILLED  ] 404 handler: return 200 status
+
+Results: 8 killed / 0 survived / 2 skipped / 8 total
+Mutation score: 100.0%
+
+============================================================
+OVERALL MUTATION SUMMARY
+============================================================
+Total mutants tested: 18
+Killed:   18
+Survived: 0
+Overall mutation score: 100.0%

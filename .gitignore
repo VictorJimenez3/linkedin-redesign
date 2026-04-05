@@ -17,3 +17,5 @@ backend/nexus.db
 
 .stryker-tmp
 tests/tests/coverage-report/
+.coverage
+.mutmut-cache

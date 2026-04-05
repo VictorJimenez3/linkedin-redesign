@@ -85,12 +85,12 @@ function FeedPage() {
           {u.name && (
             <>
               <div className="li-profile-card__banner" style={{ background: u.coverGradient || 'linear-gradient(135deg,#0a66c2,#004182)' }}>
-                <div className="li-profile-card__photo" style={{ cursor: 'pointer' }} onClick={() => navigate('profile')}>
+                <div className="li-profile-card__photo" style={{ cursor: 'pointer' }} onClick={() => navigate(`profile?id=${authorId}`)}>
                   {getInitials(u.name)}
                 </div>
               </div>
               <div className="li-profile-card__info">
-                <div className="li-profile-card__name" onClick={() => navigate('profile')}>
+                <div className="li-profile-card__name" onClick={() => navigate(`profile?id=${authorId}`)}>
                   {u.name}
 
                 </div>

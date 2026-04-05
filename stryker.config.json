@@ -19,5 +19,8 @@
         "reports",
         "tests/tests/coverage-report"
     ],
-    "disableTypeChecks": false
+    "disableTypeChecks": false,
+    "htmlReporter": {
+        "fileName": "tests/reports/mutation/mutation.html"
+    }
 }

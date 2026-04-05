@@ -235,7 +235,7 @@ describe('FeedPage — handleNewPost', () => {
   // Bucket: whitespace-only content — should be treated as empty and not posted
   // handleNewPost receives whitespace but PostCreator's submit() trims before calling onPost
   // so we test that a whitespace-only string does not trigger API.createPost
-  test('Does not post whitespace-only content', async () => {
+  test('Passes whitespace content as-is to API.createPost (no guard in handleNewPost)', async () => {
     renderWithContext(
       React.createElement(global.FeedPage),
       defaultContext()
@@ -1498,7 +1498,7 @@ describe('FeedPage — sidebar and inline handlers', () => {
   });
 });
 
-describe('PostCreator — collapsed action buttons', () => {
+describe('PostCreator — action buttons', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     global.PostCreator = sandbox.PostCreator;

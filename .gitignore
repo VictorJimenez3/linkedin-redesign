@@ -16,6 +16,6 @@ backend/nexus.db
 
 
 .stryker-tmp
-tests/tests/coverage-report/
+# tests/tests/coverage-report/ — tracked intentionally
 .coverage
 .mutmut-cache

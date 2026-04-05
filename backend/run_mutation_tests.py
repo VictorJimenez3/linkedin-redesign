@@ -7,10 +7,11 @@ Usage:
     python run_mutation_tests.py
 """
 
+import glob
+import os
+import shutil
 import subprocess
 import sys
-import os
-import re
 
 PYTHON = sys.executable
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +39,10 @@ def apply_mutation(source_path, old, new):
 def restore(source_path, original):
     with open(source_path, "w") as f:
         f.write(original)
+    # Clear bytecode cache so pytest uses fresh source, not stale .pyc
+    pycache = os.path.join(os.path.dirname(source_path), "__pycache__")
+    if os.path.isdir(pycache):
+        shutil.rmtree(pycache)
 
 def run_mutation_suite(source_file, test_file, cov_module, mutations):
     source_path = os.path.join(BASE_DIR, source_file)

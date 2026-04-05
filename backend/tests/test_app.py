@@ -639,6 +639,17 @@ class TestProfileReadiness:
         resp = client.get("/api/profile-readiness")
         assert _json(resp)["score"] <= 17
 
+    def test_T84_WB_score_is_average_not_max(self, client, monkeypatch):
+        # photo=100, headline=100 ("A"*60), rest=0 → sum=200, avg=200/6=33
+        # If score used max instead of sum: max=100, 100/6=17 — catches that mutation
+        user = {
+            **MOCK_USER, "headline": "A" * 60, "avatarColor": "#abc",
+            "about": "", "skills": [], "experience": [], "education": [],
+        }
+        monkeypatch.setattr(flask_app.dbl, "get_current_user", lambda uid: user)
+        resp = client.get("/api/profile-readiness")
+        assert _json(resp)["score"] == 33
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Outreach generate

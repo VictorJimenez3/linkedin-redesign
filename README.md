@@ -165,11 +165,11 @@ Coverage report prints to the terminal. An HTML version is saved to `coverage/lc
 
 ### Backend Unit Tests
 
-**Framework:** pytest
+**Framework:** pytest (Python — not Jest/Mocha, those are JS-only)
 
 **Files under test:**
-- `backend/database.py` — 86 tests
-- `backend/app.py` — 83 tests
+- `backend/database.py` — 86 tests, **83% coverage**
+- `backend/app.py` — 84 tests, **96% coverage**
 
 **Test files:**
 - `tests/tests/test-files/test_database.py`
@@ -179,38 +179,42 @@ Coverage report prints to the terminal. An HTML version is saved to `coverage/lc
 - `tests/tests/test-specifications/test_spec_database.md`
 - `tests/tests/test-specifications/test_spec_app.md`
 
+**Test output:**
+- `tests/tests/test-output/backend_output.txt`
+
+**Mutation analysis:**
+- `backend/run_mutation_tests.py` — 18 targeted mutants, **100% kill rate**
+
 #### Prerequisites
 
 - **Python 3.10+**
 - **pip**
 
-No running backend required — `test_database.py` uses an in-memory SQLite DB and `test_app.py` mocks all database/outreach calls via `monkeypatch`.
+No running backend required — `test_database.py` uses a temporary isolated SQLite DB and `test_app.py` mocks all database/outreach calls via `monkeypatch`.
 
 #### Install dependencies
 
 ```bash
 pip3 install -r backend/requirements.txt
-pip3 install pytest pytest-cov
 ```
 
 #### Run database tests
 
 ```bash
 cd backend
-pytest tests/test_database.py -v
+pytest ../tests/tests/test-files/test_database.py --cov=database --cov-report=term-missing -v
 ```
 
 #### Run app/route tests
 
 ```bash
 cd backend
-pytest tests/test_app.py -v
+pytest ../tests/tests/test-files/test_app.py --cov=app --cov-report=term-missing -v
 ```
 
-#### Run with coverage report
+#### Run mutation analysis
 
 ```bash
 cd backend
-pytest tests/test_database.py --cov=database --cov-report=term-missing
-pytest tests/test_app.py --cov=app --cov-report=term-missing
+python run_mutation_tests.py
 ```

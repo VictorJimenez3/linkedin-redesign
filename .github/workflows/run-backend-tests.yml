@@ -26,3 +26,8 @@ jobs:
         run: |
           cd backend
           pytest tests/test_database.py --cov=database --cov-report=term-missing --cov-fail-under=80 -v
+
+      - name: Run app unit tests with coverage
+        run: |
+          cd backend
+          pytest tests/test_app.py --cov=app --cov-report=term-missing --cov-fail-under=80 -v

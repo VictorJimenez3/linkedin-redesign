@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1775425117550" clover="3.2.0">
-  <project timestamp="1775425117550" name="All files">
+<coverage generated="1775426333385" clover="3.2.0">
+  <project timestamp="1775426333385" name="All files">
     <metrics statements="200" coveredstatements="196" conditionals="304" coveredconditionals="272" methods="80" coveredmethods="76" elements="584" coveredelements="544" complexity="0" loc="200" ncloc="200" packages="1" files="1" classes="1"/>
     <file name="MessagingPage.js" path="C:\Users\dhyan\OneDrive\Desktop\AI - 485\linkedin-redesign\js\components\pages\MessagingPage.js">
       <metrics statements="200" coveredstatements="196" conditionals="304" coveredconditionals="272" methods="80" coveredmethods="76"/>
@@ -169,22 +169,22 @@
       <line num="666" count="20" type="stmt"/>
       <line num="682" count="1" type="stmt"/>
       <line num="697" count="1" type="stmt"/>
-      <line num="713" count="78" type="cond" truecount="2" falsecount="0"/>
-      <line num="714" count="546" type="stmt"/>
-      <line num="716" count="78" type="stmt"/>
-      <line num="723" count="468" type="stmt"/>
-      <line num="725" count="468" type="stmt"/>
-      <line num="727" count="78" type="stmt"/>
-      <line num="736" count="78" type="cond" truecount="2" falsecount="0"/>
-      <line num="737" count="78" type="cond" truecount="2" falsecount="0"/>
-      <line num="738" count="78" type="cond" truecount="2" falsecount="0"/>
-      <line num="739" count="78" type="cond" truecount="4" falsecount="0"/>
-      <line num="741" count="78" type="cond" truecount="2" falsecount="0"/>
-      <line num="742" count="78" type="cond" truecount="2" falsecount="0"/>
-      <line num="743" count="78" type="cond" truecount="2" falsecount="0"/>
-      <line num="744" count="78" type="cond" truecount="2" falsecount="0"/>
-      <line num="745" count="78" type="cond" truecount="2" falsecount="0"/>
-      <line num="747" count="78" type="stmt"/>
+      <line num="713" count="80" type="cond" truecount="2" falsecount="0"/>
+      <line num="714" count="560" type="stmt"/>
+      <line num="716" count="80" type="stmt"/>
+      <line num="723" count="480" type="stmt"/>
+      <line num="725" count="480" type="stmt"/>
+      <line num="727" count="80" type="stmt"/>
+      <line num="736" count="80" type="cond" truecount="2" falsecount="0"/>
+      <line num="737" count="80" type="cond" truecount="2" falsecount="0"/>
+      <line num="738" count="80" type="cond" truecount="2" falsecount="0"/>
+      <line num="739" count="80" type="cond" truecount="4" falsecount="0"/>
+      <line num="741" count="80" type="cond" truecount="2" falsecount="0"/>
+      <line num="742" count="80" type="cond" truecount="2" falsecount="0"/>
+      <line num="743" count="80" type="cond" truecount="2" falsecount="0"/>
+      <line num="744" count="80" type="cond" truecount="2" falsecount="0"/>
+      <line num="745" count="80" type="cond" truecount="2" falsecount="0"/>
+      <line num="747" count="80" type="stmt"/>
       <line num="751" count="186" type="cond" truecount="4" falsecount="0"/>
       <line num="752" count="184" type="cond" truecount="2" falsecount="0"/>
       <line num="753" count="184" type="cond" truecount="2" falsecount="0"/>

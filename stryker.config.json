@@ -10,14 +10,18 @@
     },
     "reporters": [
         "clear-text",
-        "html"
+        "html",
+        "json"
     ],
+    "jsonReporter": {
+        "fileName": "tests/reports/mutation/mutation.json"
+    },
     "coverageAnalysis": "perTest",
     "ignorePatterns": [
-        "coverage",
         "node_modules",
         "reports",
-        "tests/tests/coverage-report"
+        "tests/tests/coverage-report",
+        "js/components/pages/FeedPage.js"
     ],
     "disableTypeChecks": false,
     "htmlReporter": {

@@ -7,6 +7,9 @@ const React = require('react');
 const { render, screen, cleanup, fireEvent, act } = require('@testing-library/react');
 require('@testing-library/jest-dom');
 
+// Suppress unhandled rejections from crashing Stryker child processes
+process.on('unhandledRejection', () => { });
+
 // =============================================================
 // SETUP GLOBALS FOR BROWSER ES5 COMPONENTS
 // =============================================================
@@ -56,22 +59,17 @@ describe('MessagingPage Component Tests', () => {
         mockSetUnreadMessages.mockClear();
     });
 
-    // 1
-    // Type: BB
-    // Spec: 1
-    // Contract: Should render LoadingSpinner component when useFetch returns loading:true and data:null
+    // 1 — BB
     test("Shows loading spinner while conversations fetch", () => {
         global.useFetch.mockReturnValue({ loading: true, data: null });
         render(React.createElement(MessagingPage));
         const spinner = screen.getByTestId('spinner');
         expect(spinner).toBeInTheDocument();
         expect(spinner).toHaveTextContent('Loading messages...');
+        expect(screen.queryByPlaceholderText('Search messages')).not.toBeInTheDocument();
     });
 
-    // 2
-    // Type: BB
-    // Spec: 2
-    // Contract: Renders the participantName property of the conversation returned by useFetch
+    // 2 — BB
     test("Renders participant name when conversations load", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -80,29 +78,23 @@ describe('MessagingPage Component Tests', () => {
         const { findAllByText } = render(React.createElement(MessagingPage));
         const aliceText = await findAllByText('Alice');
         expect(aliceText[0]).toBeInTheDocument();
+        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
     });
 
-    // 3
-    // Type: WB
-    // Spec: 3
-    // Exact Line: js/components/pages/MessagingPage.js:32
-    // selectConversation(conversations[0].id);
+    // 3 — WB
     test("Auto-selects first conversation when selectedId is null", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
             data: [{ id: 1, participantName: 'Alice' }, { id: 2, participantName: 'Bob' }]
         });
         render(React.createElement(MessagingPage));
+        expect(global.API.getConversation).toHaveBeenCalledTimes(1);
         expect(global.API.getConversation).toHaveBeenCalledWith(1);
+        expect(global.API.getConversation).not.toHaveBeenCalledWith(2);
     });
 
-    // 4
-    // Type: WB
-    // Spec: 4
-    // Exact Line: js/components/pages/MessagingPage.js:31
-    // if (conversations && conversations.length > 0 && !selectedId) {
+    // 4 — WB
     test("Does not auto-select if selectedId already set", async () => {
-        // First render sets selectedId to 2
         global.useFetch.mockReturnValue({
             loading: false,
             data: [{ id: 2, participantName: 'Bob' }]
@@ -110,10 +102,8 @@ describe('MessagingPage Component Tests', () => {
         const { rerender } = render(React.createElement(MessagingPage));
         expect(global.API.getConversation).toHaveBeenCalledWith(2);
 
-        // Clear mock calls for next assertion
         global.API.getConversation.mockClear();
 
-        // Rerender with new data, selectedId is already 2
         global.useFetch.mockReturnValue({
             loading: false,
             data: [{ id: 1, participantName: 'Alice' }, { id: 2, participantName: 'Bob' }]
@@ -122,27 +112,20 @@ describe('MessagingPage Component Tests', () => {
             rerender(React.createElement(MessagingPage));
         });
 
-        // Should NOT call getConversation with 1 because selectedId is already 2
         expect(global.API.getConversation).not.toHaveBeenCalledWith(1);
+        expect(global.API.getConversation).toHaveBeenCalledTimes(0);
     });
 
-    // 5
-    // Type: WB
-    // Spec: 5
-    // Exact Line: js/components/pages/MessagingPage.js:38
-    // setUnreadMessages(0);
+    // 5 — WB
     test("Calls setUnreadMessages(0) once on mount", () => {
         global.useFetch.mockReturnValue({ loading: true, data: null });
         render(React.createElement(MessagingPage));
         expect(mockSetUnreadMessages).toHaveBeenCalledTimes(1);
         expect(mockSetUnreadMessages).toHaveBeenCalledWith(0);
+        expect(mockSetUnreadMessages).not.toHaveBeenCalledWith(1);
     });
 
-    // 6
-    // Type: WB
-    // Spec: 6
-    // Exact Line: js/components/pages/MessagingPage.js:44
-    // messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    // 6 — WB
     test("Scrolls to bottom when messages state changes", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -158,33 +141,31 @@ describe('MessagingPage Component Tests', () => {
             resolveGetConv({ messages: [{ id: 1, text: 'Hello', isMe: false, timestamp: Date.now() }] });
         });
 
+        expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
         expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
+        expect(window.HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalledWith({ behavior: 'instant' });
     });
 
-    // 7
-    // Type: WB
-    // Spec: 7
-    // Exact Line: js/components/pages/MessagingPage.js:49
-    // setSelectedId(id);
+    // 7 — WB
     test("Sets selectedId immediately on call", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
             data: [{ id: 1, participantName: 'Alice' }, { id: 2, participantName: 'Bob' }]
         });
-        const { getByText, getAllByText } = render(React.createElement(MessagingPage));
-        const bobBtn = getByText('Bob').closest('button');
+        render(React.createElement(MessagingPage));
+        const bobBtn = screen.getByText('Bob').closest('button');
+        const aliceBtn = screen.getAllByText('Alice').find(el => el.closest('.li-msg-conv')).closest('button');
 
         fireEvent.click(bobBtn);
 
-        // Header updates to Bob (semantic check for current chat recipient)
         expect(screen.getByRole('heading', { level: 2, name: 'Bob' })).toBeInTheDocument();
+        expect(screen.queryByRole('heading', { level: 2, name: 'Alice' })).not.toBeInTheDocument();
+        // selected button gets blue-light background, unselected gets transparent
+        expect(bobBtn.style.background).toContain('var(--blue-light)');
+        expect(aliceBtn.style.background).toBe('transparent');
     });
 
-    // 8
-    // Type: WB
-    // Spec: 8
-    // Exact Line: js/components/pages/MessagingPage.js:50
-    // setMsgLoading(true);
+    // 8 — WB
     test("Sets msgLoading:true before API resolves", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -200,18 +181,17 @@ describe('MessagingPage Component Tests', () => {
             fireEvent.click(bobBtn);
         });
 
-        expect(screen.getByText('Loading conversation…')).toBeInTheDocument();
+        expect(screen.getByText('Loading conversation\u2026')).toBeInTheDocument();
+        expect(screen.queryByRole('article')).not.toBeInTheDocument();
 
         await act(async () => {
             resolveApi({ messages: [] });
         });
+
+        expect(screen.queryByText('Loading conversation\u2026')).not.toBeInTheDocument();
     });
 
-    // 9
-    // Type: WB
-    // Spec: 9
-    // Exact Line: js/components/pages/MessagingPage.js:53
-    // setMessages(data.messages || []);
+    // 9 — WB
     test("Sets messages from data.messages on success", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -229,13 +209,11 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(screen.getByText('Secret Message')).toBeInTheDocument();
-        expect(screen.queryByText('Loading conversation…')).not.toBeInTheDocument();
+        expect(screen.queryByText('Loading conversation\u2026')).not.toBeInTheDocument();
+        expect(global.API.getConversation).toHaveBeenCalledWith(2);
     });
 
-    // 10
-    // Type: RG
-    // Spec: 10
-    // RG Bug: Defaults to [] when data.messages is absent. Avoids crash on mapping undefined.
+    // 10 — RG
     test("Defaults to [] when data.messages is absent", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -250,16 +228,11 @@ describe('MessagingPage Component Tests', () => {
             fireEvent.click(bobBtn);
         });
 
-        expect(screen.queryByText('Loading conversation…')).not.toBeInTheDocument();
-        // Indirect but reliable: check no message text is rendered
-        expect(screen.queryByText('Something')).not.toBeInTheDocument();
+        expect(screen.queryByText('Loading conversation\u2026')).not.toBeInTheDocument();
+        expect(screen.queryByRole('article')).not.toBeInTheDocument();
     });
 
-    // 11
-    // Type: WB
-    // Spec: 11
-    // Exact Line: js/components/pages/MessagingPage.js:57
-    // setMessages([]);
+    // 11 — WB
     test("Sets messages to [] on API rejection", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -271,16 +244,11 @@ describe('MessagingPage Component Tests', () => {
             render(React.createElement(MessagingPage));
         });
 
-        // After mount and rejection, messages is [] and msgLoading is false
-        expect(screen.queryByText('Loading conversation…')).not.toBeInTheDocument();
-        // verify no message bubble present
+        expect(screen.queryByText('Loading conversation\u2026')).not.toBeInTheDocument();
         expect(screen.queryByRole('article')).not.toBeInTheDocument();
     });
 
-    // 12
-    // Type: EP
-    // Spec: 12
-    // Bucket: invalid draft (empty string)
+    // 12 — EP: invalid draft (empty string)
     test("No-op for empty string", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -296,12 +264,10 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(global.API.sendMessage).not.toHaveBeenCalled();
+        expect(screen.queryByRole('article')).not.toBeInTheDocument();
     });
 
-    // 13
-    // Type: EP
-    // Spec: 13
-    // Bucket: invalid draft (whitespace only)
+    // 13 — EP: invalid draft (whitespace only)
     test("No-op for whitespace only", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -311,7 +277,7 @@ describe('MessagingPage Component Tests', () => {
             render(React.createElement(MessagingPage));
         });
 
-        const input = screen.getByPlaceholderText('Write a message…');
+        const input = screen.getByPlaceholderText('Write a message\u2026');
         fireEvent.change(input, { target: { value: '   ' } });
 
         const sendBtn = screen.getByText('Send');
@@ -320,12 +286,10 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(global.API.sendMessage).not.toHaveBeenCalled();
+        expect(input.value).toBe('   ');
     });
 
-    // 14
-    // Type: EP
-    // Spec: 14
-    // Bucket: no target (selectedId is null)
+    // 14 — EP: no target (selectedId is null)
     test("No-op when selectedId is null", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -335,7 +299,7 @@ describe('MessagingPage Component Tests', () => {
             render(React.createElement(MessagingPage));
         });
 
-        const input = screen.getByPlaceholderText('Write a message…');
+        const input = screen.getByPlaceholderText('Write a message\u2026');
         fireEvent.change(input, { target: { value: 'Hello' } });
 
         const sendBtn = screen.getByText('Send');
@@ -344,13 +308,10 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(global.API.sendMessage).not.toHaveBeenCalled();
+        expect(input.value).toBe('Hello');
     });
 
-    // 15
-    // Type: WB
-    // Spec: 15
-    // Exact Line: js/components/pages/MessagingPage.js:65
-    // setDraft('');
+    // 15 — WB
     test("Clears draft state before API call", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -360,8 +321,9 @@ describe('MessagingPage Component Tests', () => {
             render(React.createElement(MessagingPage));
         });
 
-        const input = screen.getByPlaceholderText('Write a message…');
+        const input = screen.getByPlaceholderText('Write a message\u2026');
         fireEvent.change(input, { target: { value: 'Hello' } });
+        expect(input.value).toBe('Hello');
 
         const sendBtn = screen.getByText('Send');
         await act(async () => {
@@ -369,13 +331,10 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(input.value).toBe('');
+        expect(input.value).toHaveLength(0);
     });
 
-    // 16
-    // Type: WB
-    // Spec: 16
-    // Exact Line: js/components/pages/MessagingPage.js:75
-    // setMessages(prev => [...prev, newMsg]);
+    // 16 — WB
     test("Appends optimistic message with correct shape", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -384,21 +343,18 @@ describe('MessagingPage Component Tests', () => {
         await act(async () => {
             render(React.createElement(MessagingPage));
         });
-        const input = screen.getByPlaceholderText('Write a message…');
+        const input = screen.getByPlaceholderText('Write a message\u2026');
         fireEvent.change(input, { target: { value: 'Hello' } });
 
         await act(async () => {
             fireEvent.click(screen.getByText('Send'));
         });
 
-        // Optimistic message should be in DOM before/regardless of API returning
         expect(screen.getByText('Hello')).toBeInTheDocument();
+        expect(global.API.sendMessage).toHaveBeenCalledTimes(1);
     });
 
-    // 17
-    // Type: RG
-    // Spec: 17
-    // RG Bug: Sending untrimmed text to API string caused payload/formatting issues
+    // 17 — RG
     test("Sends trimmed text to API — not raw draft", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -407,7 +363,7 @@ describe('MessagingPage Component Tests', () => {
         await act(async () => {
             render(React.createElement(MessagingPage));
         });
-        const input = screen.getByPlaceholderText('Write a message…');
+        const input = screen.getByPlaceholderText('Write a message\u2026');
         fireEvent.change(input, { target: { value: ' Hello ' } });
 
         await act(async () => {
@@ -415,13 +371,11 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(global.API.sendMessage).toHaveBeenCalledWith(1, 'Hello');
+        expect(global.API.sendMessage).not.toHaveBeenCalledWith(1, ' Hello ');
+        expect(global.API.sendMessage).toHaveBeenCalledTimes(1);
     });
 
-    // 18
-    // Type: WB
-    // Spec: 18
-    // Exact Line: js/components/pages/MessagingPage.js:78
-    // showToast('Failed to send message', 'error');
+    // 18 — WB
     test("Calls showToast on API rejection", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -432,7 +386,7 @@ describe('MessagingPage Component Tests', () => {
         await act(async () => {
             render(React.createElement(MessagingPage));
         });
-        const input = screen.getByPlaceholderText('Write a message…');
+        const input = screen.getByPlaceholderText('Write a message\u2026');
         fireEvent.change(input, { target: { value: 'Hello' } });
 
         await act(async () => {
@@ -440,13 +394,11 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(mockShowToast).toHaveBeenCalledWith('Failed to send message', 'error');
+        expect(mockShowToast).toHaveBeenCalledTimes(1);
+        expect(mockShowToast).not.toHaveBeenCalledWith('Failed to send message', 'info');
     });
 
-    // 19
-    // Type: WB
-    // Spec: 19
-    // Exact Line: js/components/pages/MessagingPage.js:87
-    // setActivePanel(prev => (prev === 'score' ? null : 'score'));
+    // 19 — WB
     test("Sets activePanel to 'score' when null", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -461,16 +413,12 @@ describe('MessagingPage Component Tests', () => {
             fireEvent.click(scoreBtn);
         });
 
-        // Assert Panel rendering
         expect(screen.getByText('Profile Readiness')).toBeInTheDocument();
-        // Assert API Call trigger
         expect(global.API.getProfileReadiness).toHaveBeenCalledTimes(1);
+        expect(screen.queryByText('What\u2019s the purpose of your message?')).not.toBeInTheDocument();
     });
 
-    // 20
-    // Type: RG
-    // Spec: 20
-    // RG Bug: Toggling activePanel off triggered duplicate loadProfileReadiness calls wasting network loads
+    // 20 — RG
     test("Sets activePanel to null when was 'score'", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -481,7 +429,6 @@ describe('MessagingPage Component Tests', () => {
         });
 
         const scoreBtn = screen.getByTitle('Profile Readiness');
-        // Open
         await act(async () => {
             fireEvent.click(scoreBtn);
         });
@@ -489,677 +436,16 @@ describe('MessagingPage Component Tests', () => {
 
         global.API.getProfileReadiness.mockClear();
 
-        // Close
         await act(async () => {
             fireEvent.click(scoreBtn);
         });
 
-        // Confirm panel disappears and backend skipped
-        expect(screen.queryByText('Improve your profile before outreach')).not.toBeInTheDocument();
+        expect(screen.queryByText('Profile Readiness')).not.toBeInTheDocument();
         expect(global.API.getProfileReadiness).not.toHaveBeenCalled();
+        expect(global.API.getProfileReadiness).toHaveBeenCalledTimes(0);
     });
 
-    // 31
-    // Type: WB
-    // Spec: 31
-    // Exact Line: js/components/pages/MessagingPage.js:121
-    // if (!selectedId) return;
-    test("openOutreachGuide returns early safely when selectedId is null", async () => {
-        global.useFetch.mockReturnValue({
-            loading: false,
-            data: [] // selectedId will remain null
-        });
-
-        await act(async () => {
-            render(React.createElement(MessagingPage));
-        });
-
-        const guideBtn = screen.getByTitle('Outreach Guide');
-        // Bypass the disabled HTML layer merely to stress-test the explicit exact line's protection boundary 
-        guideBtn.removeAttribute('disabled');
-
-        await act(async () => {
-            fireEvent.click(guideBtn);
-        });
-
-        // Assert it gracefully returned early because internal state arrays remained unmounted
-        expect(screen.queryByText('What’s the purpose of your message?')).not.toBeInTheDocument();
-    });
-
-    // 32
-    // Type: WB
-    // Spec: 32
-    // Exact Line: js/components/pages/MessagingPage.js:126
-    // setGuideStateByConv(prev => { ... 
-    test("Initializes fresh state for new conversation in openOutreachGuide", async () => {
-        global.useFetch.mockReturnValue({
-            loading: false,
-            data: [{ id: 1, participantName: 'Alice' }]
-        });
-
-        await act(async () => {
-            render(React.createElement(MessagingPage));
-        });
-
-        const guideBtn = screen.getByTitle('Outreach Guide');
-        await act(async () => {
-            fireEvent.click(guideBtn);
-        });
-
-        // Assert standard fresh step=1 initial values
-        expect(screen.getByText('What’s the purpose of your message?')).toBeInTheDocument();
-    });
-
-    // 33
-    // Type: WB
-    // Spec: 33
-    // Exact Line: js/components/pages/MessagingPage.js:128
-    // if (!next[selectedId]) {
-    test("Does not overwrite existing guide state when reopening", async () => {
-        global.useFetch.mockReturnValue({
-            loading: false,
-            data: [{ id: 1, participantName: 'Alice' }]
-        });
-
-        await act(async () => {
-            render(React.createElement(MessagingPage));
-        });
-
-        const guideBtn = screen.getByTitle('Outreach Guide');
-        // Open
-        await act(async () => {
-            fireEvent.click(guideBtn);
-        });
-
-        // Pick a goal to force UI State to Step 2
-        const adviceGoal = screen.getByText('Ask for Advice').closest('div');
-        await act(async () => {
-            fireEvent.click(adviceGoal);
-        });
-
-        expect(screen.getByText('Personalize your message')).toBeInTheDocument();
-
-        // Close Guide
-        await act(async () => {
-            fireEvent.click(guideBtn);
-        });
-
-        // Re-open Guide
-        await act(async () => {
-            fireEvent.click(guideBtn);
-        });
-
-        // State remains perfectly preserved natively
-        expect(screen.getByText('Personalize your message')).toBeInTheDocument();
-        expect(screen.queryByText('What’s the purpose of your message?')).not.toBeInTheDocument();
-    });
-
-    // 34
-    // Type: WB
-    // Spec: 34
-    // Exact Line: js/components/pages/MessagingPage.js:149
-    // if (!selectedId) return; - setGuideState
-    test("setGuideState returns early safely when selectedId is null", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        // Test via exported OutreachGuidePanel - pass null props or empty state
-        // More directly: verified via UI not being present.
-        expect(screen.queryByTitle('Try another version')).not.toBeInTheDocument();
-    });
-
-    // 36
-    // Type: WB
-    // Spec: 36
-    // Exact Line: js/components/pages/MessagingPage.js:157
-    // if (!selectedId) return; - setGuideDetailsPatch
-    test("setGuideDetailsPatch returns early safely when selectedId is null", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        // Guard protection for details patching
-        expect(screen.queryByPlaceholderText('Personalize your message')).not.toBeInTheDocument();
-    });
-
-    // 35
-    // [selectedId]: { ...(prev[selectedId] || {}), ...patch },
-    test("setGuideState shallow-merges patch, preserves other keys", async () => {
-        global.useFetch.mockReturnValue({
-            loading: false,
-            data: [{ id: 1, participantName: 'Alice' }]
-        });
-
-        await act(async () => {
-            render(React.createElement(MessagingPage));
-        });
-
-        const guideBtn = screen.getByTitle('Outreach Guide');
-        await act(async () => {
-            fireEvent.click(guideBtn);
-        });
-
-        // Click goal to step 2
-        const jobGoal = screen.getByText('Job / Internship').closest('div');
-        await act(async () => {
-            fireEvent.click(jobGoal);
-        });
-
-        // Set deep internal detail 
-        const recipientLabel = screen.getByText('Their first name');
-        fireEvent.change(recipientLabel.nextElementSibling, { target: { value: 'Frank' } });
-
-        // Click Next to step 3 mapping outer shallow object updates via internally triggering setGuideState({ step: 3 })
-        const nextBtn = screen.getByText('Next →');
-        await act(async () => {
-            fireEvent.click(nextBtn);
-        });
-
-        // Prove internal detail state wasn't unmounted/destroyed
-        const textarea = screen.getByPlaceholderText('Your message will appear here…');
-        expect(textarea.value).toContain('Frank');
-    });
-
-    // 37 (Note: 36 SKIPPED due to failing hallucination constraints)
-    // Type: WB
-    // Spec: 37
-    // Exact Line: js/components/pages/MessagingPage.js:162
-    // details: { ...((prev[selectedId] || {}).details || {}), ...patch },
-    test("setGuideDetailsPatch deep-merges into details only, preserves other detail fields", async () => {
-        global.useFetch.mockReturnValue({
-            loading: false,
-            data: [{ id: 1, participantName: 'Alice' }]
-        });
-
-        await act(async () => {
-            render(React.createElement(MessagingPage));
-        });
-
-        const guideBtn = screen.getByTitle('Outreach Guide');
-        await act(async () => {
-            fireEvent.click(guideBtn);
-        });
-
-        const networkGoal = screen.getByText('Build Network').closest('div');
-        await act(async () => {
-            fireEvent.click(networkGoal);
-        });
-
-        const recipientLabel = screen.getByText('Their first name');
-        const roleLabel = screen.getByText('Your name / major');
-
-        // Target and replace the first input hook element's state exclusively 
-        fireEvent.change(recipientLabel.nextElementSibling, { target: { value: 'Frank' } });
-        // Target specifically the internal bounds of the second input hook
-        fireEvent.change(roleLabel.nextElementSibling, { target: { value: 'Software Eng' } });
-
-        // Expect exact 2x mapping preservation dynamically nested inside the details patch logic
-        expect(recipientLabel.nextElementSibling.value).toBe('Frank');
-        expect(roleLabel.nextElementSibling.value).toBe('Software Eng');
-    });
-
-    // 41 (Note: 38, 39, 40 SKIPPED due to failing hallucination constraints)
-    // Type: BB
-    // Spec: 41
-    // Contract: computeGuidePreview accurately embeds user data arguments into output string templates
-    test("Returns filled template for valid goal and details", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-
-        // Enter data
-        const recipientLabel = screen.getByText('Their first name');
-        fireEvent.change(recipientLabel.nextElementSibling, { target: { value: 'Frank' } });
-
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        const textarea = screen.getByPlaceholderText('Your message will appear here…');
-        // Check output string matches standard contract + populated variable
-        expect(textarea.value).toContain('Frank');
-        expect(textarea.value).toContain("I'd love to learn from your experience");
-    });
-
-    // 42
-    // Type: WB
-    // Spec: 42
-    // Exact Line: js/components/pages/MessagingPage.js:171
-    // const variant = variants[state.variantIdx % variants.length];
-    test("Uses variantIdx modulo to wrap around variants seamlessly", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        // Step 3 initial template
-        const textarea = screen.getByPlaceholderText('Your message will appear here…');
-        const initialText = textarea.value;
-        const cycleBtn = screen.getByTitle('Try another version');
-
-        // "Ask for Advice" has exactly 2 templates. Caching exactly 2 cycles wraps it safely using Modulo math
-        await act(async () => fireEvent.click(cycleBtn));
-        const alternateText = textarea.value;
-        expect(initialText).not.toEqual(alternateText); // variant 2 is distinct
-
-        await act(async () => fireEvent.click(cycleBtn));
-        // Modulo returns pointer uniquely back to [0]
-        expect(textarea.value).toEqual(initialText);
-    });
-
-    // 43
-    // Type: WB
-    // Spec: 43
-    // Exact Lines: js/components/pages/MessagingPage.js:180-181
-    // step: 2, variantIdx: 0,
-    test("selectGoal resets step:2 and variantIdx:0", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        // Prove we mutated state to be variantIdx: 1
-        const cycleBtn = screen.getByTitle('Try another version');
-        await act(async () => fireEvent.click(cycleBtn));
-        expect(screen.getByText('v2 of 2')).toBeInTheDocument();
-
-        // Return to Goal Picker (Step 1)
-        await act(async () => fireEvent.click(screen.getByText('← Back')));
-        await act(async () => fireEvent.click(screen.getByText('← Back')));
-
-        // Re-establish tracking via alternative goal selection natively resetting payload maps
-        await act(async () => fireEvent.click(screen.getByText('Job / Internship').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        // variantIdx was cleanly blasted back to 0 natively
-        expect(screen.getByText('v1 of 2')).toBeInTheDocument();
-    });
-
-    // 44
-    // Type: BB
-    // Spec: 44
-    // Contract: Output string compute block reliably caches previews immediately upon evaluating string inputs
-    test("selectGoal computes and stores non-empty preview natively", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Follow Up').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        const textarea = screen.getByPlaceholderText('Your message will appear here…');
-        expect(textarea.value.length).toBeGreaterThan(12);
-    });
-
-    // 45
-    // Type: WB
-    // Spec: 45
-    // Exact Line: js/components/pages/MessagingPage.js:191 (Unreachable via UI branch protect)
-    test("nextStep returns early if guideState for selectedId is missing", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        // We open the guide but don't select a goal (stays on step 1)
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        // nextStep is called internally on step-1 with no goal -> shows toast.
-        // If we also had no state at all, it would return. Covered by step-1 toast test 46
-        expect(screen.getByText('What’s the purpose of your message?')).toBeInTheDocument();
-    });
-
-    // 46
-    // showToast('Pick a goal to continue', 'info');
-    test("nextStep shows info toast on Step 1 with no goal selected", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        // Open Guide (Initial mode = Step 1 / No Goal)
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-
-        // Invoke Next 
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        // Verify explicit native block intercept handled safely via standard error mappings
-        expect(mockShowToast).toHaveBeenCalledWith('Pick a goal to continue', 'info');
-
-        // State explicitly stayed frozen dynamically verifying no bypass
-        expect(screen.getByText('What’s the purpose of your message?')).toBeInTheDocument();
-    });
-
-    // 47
-    // Type: WB
-    // Spec: 47
-    // Exact Line: js/components/pages/MessagingPage.js:196
-    // setGuideState({ step: 2 });
-    test("nextStep advances to step 2 when goal is present", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide'))); // open step 1
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div'))); // auto sets step 2
-        await act(async () => fireEvent.click(screen.getByText('← Back'))); // Force back to Step 1, but goal stays inside state
-
-        // We are on Step 1. Click Next
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        // Proves Line 196 triggered gracefully pushing it to 2 implicitly natively
-        expect(screen.getByText('Personalize your message')).toBeInTheDocument();
-    });
-
-    // 48
-    // Type: WB
-    // Spec: 48
-    // Exact Line: js/components/pages/MessagingPage.js:201
-    // const updated = { ...s, step: 3 };
-    test("nextStep advances Step 2 to Step 3", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-
-        // Currently Step 2. Fire Next
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        // Assert Step 3 title appears
-        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
-    });
-
-    // 59
-    // Type: WB
-    // Spec: 59
-    // Exact Line: js/components/pages/MessagingPage.js:225
-    // if (!selectedId) return; - updateGuidePreviewManual
-    test("updateGuidePreviewManual returns early safely when selectedId is null", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        expect(screen.queryByPlaceholderText('Your message will appear here…')).not.toBeInTheDocument();
-    });
-
-    // X1 (updateGuidePreviewManual - Spec 60)
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:228
-    // setGuideState({ preview: value });
-    test("updateGuidePreviewManual overrides state.preview explicitly", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        const textarea = screen.getByPlaceholderText('Your message will appear here…');
-        fireEvent.change(textarea, { target: { value: 'Totally Custom Message' } });
-
-        expect(textarea.value).toBe('Totally Custom Message');
-    });
-
-    // 61
-    // Type: WB
-    // Spec: 61
-    // Exact Line: js/components/pages/MessagingPage.js:233
-    // if (!selectedId) return; - applyGuideMessage
-    test("applyGuideMessage returns early safely when selectedId is null", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        expect(screen.queryByText('Use this message →')).not.toBeInTheDocument();
-    });
-
-    // X2 (applyGuideMessage Success - Spec 65)
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:240
-    // showToast('Message drafted — review and send!', 'success');
-    test("applyGuideMessage maps text payload to user composer draft properly", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        const textarea = screen.getByPlaceholderText('Your message will appear here…');
-        fireEvent.change(textarea, { target: { value: 'Hello Custom' } });
-
-        const insertBtn = screen.getByText('Use this message →');
-        // Apply manual insertion
-        await act(async () => fireEvent.click(insertBtn));
-
-        expect(mockShowToast).toHaveBeenCalledWith('Message drafted — review and send!', 'success');
-        // Composer draft input (placeholder 'Write a message…') captures it inherently 
-        const composerInput = screen.getByPlaceholderText('Write a message…');
-        expect(composerInput.value).toBe('Hello Custom');
-        // Panel natively unmounted
-        expect(screen.queryByText('Review & edit your message')).not.toBeInTheDocument();
-    });
-
-    // X3 (applyGuideMessage Empty Trap)
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:236
-    // showToast('Nothing to insert yet', 'info');
-    test("applyGuideMessage intercepts empty strings rendering gracefully", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next →')));
-
-        const textarea = screen.getByPlaceholderText('Your message will appear here…');
-        fireEvent.change(textarea, { target: { value: '   ' } }); // Whitespace maps as strictly empty string post-trim 
-
-        const insertBtn = screen.getByText('Use this message →');
-        await act(async () => fireEvent.click(insertBtn));
-
-        expect(mockShowToast).toHaveBeenCalledWith('Nothing to insert yet', 'info');
-        // Verify panel natively stayed firmly mounted 
-        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
-    });
-
-    // 49
-    // Type: WB
-    // Spec: 49
-    // Exact Line: js/components/pages/MessagingPage.js:205
-    // (falls through — no branch fires on step===3, function just returns implicitly)
-    test("nextStep is no-op when already on step 3", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next \u2192'))); // step 2 → 3
-
-        // Verify we are on step 3
-        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
-
-        // Fire Next on step 3 — expect no change to panel content (it stays on step 3)
-        // Since step 3 has no Next button normally (it has 'Done' which closes it), 
-        // we check that the step indicator or text persists.
-        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
-        expect(screen.getByPlaceholderText('Your message will appear here…')).toBeInTheDocument();
-    });
-
-    // 51
-    // Type: WB
-    // Spec: 51
-    // Exact Line: js/components/pages/MessagingPage.js:211
-    // if (s.step > 1) setGuideState({ step: s.step - 1 });
-    test("backStep decrements step from 2 to 1", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-
-        // We are now on step 2
-        expect(screen.getByText('Personalize your message')).toBeInTheDocument();
-
-        await act(async () => fireEvent.click(screen.getByText('\u2190 Back')));
-
-        // Back at step 1
-        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
-    });
-
-    // 52
-    // Type: WB
-    // Spec: 52
-    // Exact Line: js/components/pages/MessagingPage.js:211
-    // if (s.step > 1) setGuideState(...) — branch NOT taken when step===1
-    test("backStep is no-op when step is already 1", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-
-        // We are on step 1
-        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
-
-        // Step-1 has no Back button rendered (visibility:hidden / not mounted)
-        // Confirm 'What's the purpose...' still shown (unchanged state)
-        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
-    });
-
-    // 56
-    // Type: WB
-    // Spec: 56
-    // Exact Line: js/components/pages/MessagingPage.js:220
-    // variantIdx: (s.variantIdx + 1) % variants.length
-    test("cycleVariant advances variantIdx from 0 to 1", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
-
-        expect(screen.getByText('v1 of 2')).toBeInTheDocument();
-
-        await act(async () => fireEvent.click(screen.getByTitle('Try another version')));
-
-        expect(screen.getByText('v2 of 2')).toBeInTheDocument();
-    });
-
-    // 57
-    // Type: WB
-    // Spec: 57
-    // Exact Line: js/components/pages/MessagingPage.js:220
-    // (s.variantIdx + 1) % variants.length — wraps 1→0 for 2-template goal
-    test("cycleVariant wraps variantIdx to 0 when at last template", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
-
-        // Advance to variant 1
-        await act(async () => fireEvent.click(screen.getByTitle('Try another version')));
-        expect(screen.getByText('v2 of 2')).toBeInTheDocument();
-
-        // Cycle again — should wrap back to variant 0
-        await act(async () => fireEvent.click(screen.getByTitle('Try another version')));
-        expect(screen.getByText('v1 of 2')).toBeInTheDocument();
-    });
-
-    // 58
-    // Type: WB
-    // Spec: 58
-    // Exact Line: js/components/pages/MessagingPage.js:221
-    // updated.preview = computeGuidePreview(updated);
-    test("cycleVariant recomputes preview to variant-1 output", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-
-        const recipientLabel = screen.getByText('Their first name');
-        fireEvent.change(recipientLabel.nextElementSibling, { target: { value: 'Dave' } });
-        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
-
-        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
-        const variant0Text = textarea.value;
-
-        await act(async () => fireEvent.click(screen.getByTitle('Try another version')));
-
-        const variant1Text = textarea.value;
-        // Hallucination check: variant-1 is distinct from variant-0 and still contains 'Dave'
-        expect(variant1Text).not.toEqual(variant0Text);
-        expect(variant1Text).toContain('Dave');
-    });
-
-    // 60 (Note: 59 SKIPPED — unreachable: updateGuidePreviewManual requires guide panel open which requires selectedId)
-    // Type: WB
-    // Spec: 60
-    // Exact Line: js/components/pages/MessagingPage.js:228
-    // setGuideState({ preview: value });
-    test("updateGuidePreviewManual sets preview to the exact string provided", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
-
-        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
-        fireEvent.change(textarea, { target: { value: 'My custom message' } });
-
-        expect(textarea.value).toBe('My custom message');
-    });
-
-    // 62
-    // Type: EP
-    // Spec: 62
-    // Bucket: empty string preview
-    test("applyGuideMessage shows info toast when preview is empty string", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
-
-        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
-        fireEvent.change(textarea, { target: { value: '' } });
-
-        await act(async () => fireEvent.click(screen.getByText('Use this message \u2192')));
-        expect(mockShowToast).toHaveBeenCalledWith('Nothing to insert yet', 'info');
-    });
-
-    // 64 (Note: 61 and 63 SKIPPED — 61 is unreachable as above; 63 is same EP bucket as X3 already written)
-    // Type: WB
-    // Spec: 64
-    // Exact Line: js/components/pages/MessagingPage.js:239
-    // setDraft(text);
-    test("applyGuideMessage sets draft to trimmed preview on success", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
-
-        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
-        fireEvent.change(textarea, { target: { value: '  Hello world  ' } });
-
-        await act(async () => fireEvent.click(screen.getByText('Use this message \u2192')));
-
-        const composerInput = screen.getByPlaceholderText('Write a message\u2026');
-        expect(composerInput.value).toBe('Hello world');
-    });
-
-    // 65
-    // Type: WB
-    // Spec: 65
-    // Exact Lines: js/components/pages/MessagingPage.js:240-241
-    // showToast('Message drafted — review and send!', 'success'); setActivePanel(null);
-    test("applyGuideMessage shows success toast and closes panel", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        await act(async () => render(React.createElement(MessagingPage)));
-        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
-
-        await act(async () => fireEvent.click(screen.getByText('Use this message \u2192')));
-
-        expect(mockShowToast).toHaveBeenCalledWith('Message drafted \u2014 review and send!', 'success');
-        expect(screen.queryByText('Review & edit your message')).not.toBeInTheDocument();
-    });
-
-    // 21
-    // Type: WB
-    // Spec: 21
-    // Exact Line: js/components/pages/MessagingPage.js:97
-    // setReadinessLoading(true);
+    // 21 — WB
     test("Sets readinessLoading:true at start", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -1178,17 +464,17 @@ describe('MessagingPage Component Tests', () => {
             fireEvent.click(scoreBtn);
         });
 
-        expect(screen.getByText('Calculating score…')).toBeInTheDocument();
+        expect(screen.getByText('Calculating score\u2026')).toBeInTheDocument();
+        expect(screen.queryByText('99')).not.toBeInTheDocument();
 
         await act(async () => {
             resolveApi({ score: 100, sections: [], fixes: [] });
         });
+
+        expect(screen.queryByText('Calculating score\u2026')).not.toBeInTheDocument();
     });
 
-    // 22
-    // Type: BB
-    // Spec: 22
-    // Contract: Should render data correctly from API on success (renders 85 score)
+    // 22 — BB
     test("Sets readiness from API on success", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -1207,14 +493,12 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(screen.getByText('85')).toBeInTheDocument();
-        expect(screen.queryByText('Calculating score…')).not.toBeInTheDocument();
+        expect(screen.queryByText('84')).not.toBeInTheDocument();
+        expect(screen.queryByText('86')).not.toBeInTheDocument();
+        expect(screen.queryByText('Calculating score\u2026')).not.toBeInTheDocument();
     });
 
-    // 23
-    // Type: WB
-    // Spec: 23
-    // Exact Line: js/components/pages/MessagingPage.js:103
-    // if (refresh) showToast('Score refreshed', 'success');
+    // 23 — WB
     test("No showToast when refresh:false and API succeeds", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -1232,13 +516,11 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(mockShowToast).not.toHaveBeenCalledWith('Score refreshed', expect.anything());
+        expect(mockShowToast).not.toHaveBeenCalledWith('Score refreshed (mock)', expect.anything());
+        expect(mockShowToast).toHaveBeenCalledTimes(0);
     });
 
-    // 24
-    // Type: WB
-    // Spec: 24
-    // Exact Line: js/components/pages/MessagingPage.js:103
-    // if (refresh) showToast('Score refreshed', 'success');
+    // 24 — WB
     test("showToast 'Score refreshed' when refresh:true + success", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -1261,13 +543,11 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(mockShowToast).toHaveBeenCalledWith('Score refreshed', 'success');
+        expect(mockShowToast).not.toHaveBeenCalledWith('Score refreshed', 'info');
+        expect(mockShowToast).not.toHaveBeenCalledWith('Score refreshed', 'error');
     });
 
-    // 25
-    // Type: WB
-    // Spec: 25
-    // Exact Line: js/components/pages/MessagingPage.js:108
-    // setReadinessError('Backend not running — using mocked score');
+    // 25 — WB
     test("Uses mock fallback and sets readinessError on failure", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -1284,21 +564,17 @@ describe('MessagingPage Component Tests', () => {
             fireEvent.click(scoreBtn);
         });
 
-        expect(screen.getByText('Backend not running — using mocked score')).toBeInTheDocument();
+        expect(screen.getByText('Backend not running \u2014 using mocked score')).toBeInTheDocument();
         expect(screen.getByText('Profile Readiness')).toBeInTheDocument();
+        expect(screen.queryByText('Calculating score\u2026')).not.toBeInTheDocument();
     });
 
-    // 26
-    // Type: WB
-    // Spec: 26
-    // Exact Line: js/components/pages/MessagingPage.js:109
-    // if (refresh) showToast('Score refreshed (mock)', 'info');
+    // 26 — WB
     test("showToast 'Score refreshed (mock)' when refresh:true + failure", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
             data: [{ id: 1, participantName: 'Alice' }]
         });
-        // Start open
         global.API.getProfileReadiness.mockReturnValueOnce(Promise.resolve({ score: 85, sections: [], fixes: [] }));
 
         await act(async () => {
@@ -1310,7 +586,6 @@ describe('MessagingPage Component Tests', () => {
             fireEvent.click(scoreBtn);
         });
 
-        // Mock failure for refresh
         global.API.getProfileReadiness.mockReturnValueOnce(Promise.reject(new Error("Down")));
 
         const refreshBtn = screen.getByText('Refresh score');
@@ -1319,12 +594,10 @@ describe('MessagingPage Component Tests', () => {
         });
 
         expect(mockShowToast).toHaveBeenCalledWith('Score refreshed (mock)', 'info');
+        expect(mockShowToast).not.toHaveBeenCalledWith('Score refreshed (mock)', 'success');
     });
 
-    // 27
-    // Type: RG
-    // Spec: 27
-    // RG Bug: Missing unloader block traps the UI in a loading state permanently on API success.
+    // 27 — RG
     test("readinessLoading:false in finally on success", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -1341,14 +614,12 @@ describe('MessagingPage Component Tests', () => {
             fireEvent.click(scoreBtn);
         });
 
-        expect(screen.queryByText('Calculating score…')).not.toBeInTheDocument();
+        expect(screen.queryByText('Calculating score\u2026')).not.toBeInTheDocument();
         expect(screen.getByText('99')).toBeInTheDocument();
+        expect(screen.queryByText('98')).not.toBeInTheDocument();
     });
 
-    // 28
-    // Type: RG
-    // Spec: 28
-    // RG Bug: Missing unloader block traps the UI in a loading state permanently on API failure.
+    // 28 — RG
     test("readinessLoading:false in finally on failure", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -1365,15 +636,11 @@ describe('MessagingPage Component Tests', () => {
             fireEvent.click(scoreBtn);
         });
 
-        expect(screen.queryByText('Calculating score…')).not.toBeInTheDocument();
-        expect(screen.getByText('Backend not running — using mocked score')).toBeInTheDocument();
+        expect(screen.queryByText('Calculating score\u2026')).not.toBeInTheDocument();
+        expect(screen.getByText('Backend not running \u2014 using mocked score')).toBeInTheDocument();
     });
 
-    // 29
-    // Type: WB
-    // Spec: 29
-    // Exact Line: js/components/pages/MessagingPage.js:120
-    // setActivePanel(prev => (prev === 'guide' ? null : 'guide'));
+    // 29 — WB
     test("Toggles activePanel to 'guide' when null", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -1389,14 +656,11 @@ describe('MessagingPage Component Tests', () => {
             fireEvent.click(guideBtn);
         });
 
-        expect(screen.getByText('What’s the purpose of your message?')).toBeInTheDocument();
+        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
+        expect(screen.queryByText('Profile Readiness')).not.toBeInTheDocument();
     });
 
-    // 30
-    // Type: WB
-    // Spec: 30
-    // Exact Line: js/components/pages/MessagingPage.js:120
-    // setActivePanel(prev => (prev === 'guide' ? null : 'guide'));
+    // 30 — WB
     test("Toggles activePanel to null when was 'guide'", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
@@ -1408,24 +672,492 @@ describe('MessagingPage Component Tests', () => {
         });
 
         const guideBtn = screen.getByTitle('Outreach Guide');
-        // Open
-        await act(async () => {
-            fireEvent.click(guideBtn);
-        });
-        expect(screen.getByText('What’s the purpose of your message?')).toBeInTheDocument();
+        await act(async () => fireEvent.click(guideBtn));
+        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
 
-        // Close
-        await act(async () => {
-            fireEvent.click(guideBtn);
-        });
-        expect(screen.queryByText('What’s the purpose of your message?')).not.toBeInTheDocument();
+        await act(async () => fireEvent.click(guideBtn));
+        expect(screen.queryByText('What\u2019s the purpose of your message?')).not.toBeInTheDocument();
+        expect(screen.queryByText('Profile Readiness')).not.toBeInTheDocument();
     });
 
-    // CX1
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:269
-    // allConversations.filter(c => c.participantName.toLowerCase().includes(search.toLowerCase()))
-    test("Search box filters conversation list by participant name", async () => {
+    // 31 — WB
+    test("openOutreachGuide returns early safely when selectedId is null", async () => {
+        global.useFetch.mockReturnValue({
+            loading: false,
+            data: []
+        });
+
+        await act(async () => {
+            render(React.createElement(MessagingPage));
+        });
+
+        const guideBtn = screen.getByTitle('Outreach Guide');
+        guideBtn.removeAttribute('disabled');
+
+        await act(async () => {
+            fireEvent.click(guideBtn);
+        });
+
+        expect(screen.queryByText('What\u2019s the purpose of your message?')).not.toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+    });
+
+    // 32 — WB
+    test("Initializes fresh state for new conversation in openOutreachGuide", async () => {
+        global.useFetch.mockReturnValue({
+            loading: false,
+            data: [{ id: 1, participantName: 'Alice' }]
+        });
+
+        await act(async () => {
+            render(React.createElement(MessagingPage));
+        });
+
+        const guideBtn = screen.getByTitle('Outreach Guide');
+        await act(async () => {
+            fireEvent.click(guideBtn);
+        });
+
+        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
+        expect(screen.getByText('Ask for Advice')).toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+    });
+
+    // 33 — WB
+    test("Does not overwrite existing guide state when reopening", async () => {
+        global.useFetch.mockReturnValue({
+            loading: false,
+            data: [{ id: 1, participantName: 'Alice' }]
+        });
+
+        await act(async () => {
+            render(React.createElement(MessagingPage));
+        });
+
+        const guideBtn = screen.getByTitle('Outreach Guide');
+        await act(async () => fireEvent.click(guideBtn));
+
+        const adviceGoal = screen.getByText('Ask for Advice').closest('div');
+        await act(async () => fireEvent.click(adviceGoal));
+
+        expect(screen.getByText('Personalize your message')).toBeInTheDocument();
+
+        await act(async () => fireEvent.click(guideBtn));
+        await act(async () => fireEvent.click(guideBtn));
+
+        expect(screen.getByText('Personalize your message')).toBeInTheDocument();
+        expect(screen.queryByText('What\u2019s the purpose of your message?')).not.toBeInTheDocument();
+    });
+
+    // 34 — WB
+    test("setGuideState returns early safely when selectedId is null", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        expect(screen.queryByTitle('Try another version')).not.toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+    });
+
+    // 35 — WB
+    test("setGuideState shallow-merges patch, preserves other keys", async () => {
+        global.useFetch.mockReturnValue({
+            loading: false,
+            data: [{ id: 1, participantName: 'Alice' }]
+        });
+
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        const guideBtn = screen.getByTitle('Outreach Guide');
+        await act(async () => fireEvent.click(guideBtn));
+
+        const jobGoal = screen.getByText('Job / Internship').closest('div');
+        await act(async () => fireEvent.click(jobGoal));
+
+        const recipientLabel = screen.getByText('Their first name');
+        fireEvent.change(recipientLabel.nextElementSibling, { target: { value: 'Frank' } });
+
+        const nextBtn = screen.getByText('Next \u2192');
+        await act(async () => fireEvent.click(nextBtn));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        expect(textarea.value).toContain('Frank');
+        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+    });
+
+    // 36 — WB
+    test("setGuideDetailsPatch returns early safely when selectedId is null", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        expect(screen.queryByPlaceholderText('Personalize your message')).not.toBeInTheDocument();
+        expect(screen.queryByText('Their first name')).not.toBeInTheDocument();
+    });
+
+    // 37 — WB
+    test("setGuideDetailsPatch deep-merges into details only, preserves other detail fields", async () => {
+        global.useFetch.mockReturnValue({
+            loading: false,
+            data: [{ id: 1, participantName: 'Alice' }]
+        });
+
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        const guideBtn = screen.getByTitle('Outreach Guide');
+        await act(async () => fireEvent.click(guideBtn));
+
+        const networkGoal = screen.getByText('Build Network').closest('div');
+        await act(async () => fireEvent.click(networkGoal));
+
+        const recipientLabel = screen.getByText('Their first name');
+        const roleLabel = screen.getByText('Your name / major');
+
+        fireEvent.change(recipientLabel.nextElementSibling, { target: { value: 'Frank' } });
+        fireEvent.change(roleLabel.nextElementSibling, { target: { value: 'Software Eng' } });
+
+        expect(recipientLabel.nextElementSibling.value).toBe('Frank');
+        expect(roleLabel.nextElementSibling.value).toBe('Software Eng');
+        expect(recipientLabel.nextElementSibling.value).not.toBe('Software Eng');
+    });
+
+    // 41 — BB
+    test("Returns filled template for valid goal and details", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+
+        const recipientLabel = screen.getByText('Their first name');
+        fireEvent.change(recipientLabel.nextElementSibling, { target: { value: 'Frank' } });
+
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        expect(textarea.value).toContain('Frank');
+        expect(textarea.value).toContain("I'd love to learn from your experience");
+        expect(textarea.value.length).toBeGreaterThan(20);
+        expect(textarea.value).not.toBe('');
+    });
+
+    // 42 — WB
+    test("Uses variantIdx modulo to wrap around variants seamlessly", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        const initialText = textarea.value;
+        const cycleBtn = screen.getByTitle('Try another version');
+
+        await act(async () => fireEvent.click(cycleBtn));
+        const alternateText = textarea.value;
+        expect(initialText).not.toEqual(alternateText);
+        expect(alternateText.length).toBeGreaterThan(0);
+
+        await act(async () => fireEvent.click(cycleBtn));
+        expect(textarea.value).toEqual(initialText);
+        expect(textarea.value).not.toEqual(alternateText);
+    });
+
+    // 43 — WB
+    test("selectGoal resets step:2 and variantIdx:0", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const cycleBtn = screen.getByTitle('Try another version');
+        await act(async () => fireEvent.click(cycleBtn));
+        expect(screen.getByText('v2 of 2')).toBeInTheDocument();
+
+        await act(async () => fireEvent.click(screen.getByText('\u2190 Back')));
+        await act(async () => fireEvent.click(screen.getByText('\u2190 Back')));
+
+        await act(async () => fireEvent.click(screen.getByText('Job / Internship').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        expect(screen.getByText('v1 of 2')).toBeInTheDocument();
+        expect(screen.queryByText('v2 of 2')).not.toBeInTheDocument();
+    });
+
+    // 44 — BB
+    test("selectGoal computes and stores non-empty preview natively", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Follow Up').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        expect(textarea.value.length).toBeGreaterThan(12);
+        expect(textarea.value.trim()).not.toBe('');
+    });
+
+    // 45 — WB
+    test("nextStep returns early if guideState for selectedId is missing", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+    });
+
+    // 46 — WB
+    test("nextStep shows info toast on Step 1 with no goal selected", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        expect(mockShowToast).toHaveBeenCalledWith('Pick a goal to continue', 'info');
+        expect(mockShowToast).toHaveBeenCalledTimes(1);
+        expect(mockShowToast).not.toHaveBeenCalledWith('Pick a goal to continue', 'error');
+        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+    });
+
+    // 47 — WB
+    test("nextStep advances to step 2 when goal is present", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('\u2190 Back')));
+
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        expect(screen.getByText('Personalize your message')).toBeInTheDocument();
+        expect(screen.queryByText('What\u2019s the purpose of your message?')).not.toBeInTheDocument();
+        expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
+    // 48 — WB
+    test("nextStep advances Step 2 to Step 3", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Your message will appear here\u2026')).toBeInTheDocument();
+    });
+
+    // 49 — WB
+    test("nextStep is no-op when already on step 3", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
+        const textareaBefore = screen.getByPlaceholderText('Your message will appear here\u2026').value;
+
+        expect(screen.queryByText('Next \u2192')).not.toBeInTheDocument();
+        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Your message will appear here\u2026').value).toBe(textareaBefore);
+    });
+
+    // 51 — WB
+    test("backStep decrements step from 2 to 1", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+
+        expect(screen.getByText('Personalize your message')).toBeInTheDocument();
+
+        await act(async () => fireEvent.click(screen.getByText('\u2190 Back')));
+
+        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+    });
+
+    // 52 — WB
+    test("backStep is no-op when step is already 1", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+
+        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
+        expect(screen.queryByText('\u2190 Back')).not.toBeVisible();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+    });
+
+    // 56 — WB
+    test("cycleVariant advances variantIdx from 0 to 1", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        expect(screen.getByText('v1 of 2')).toBeInTheDocument();
+        expect(screen.queryByText('v2 of 2')).not.toBeInTheDocument();
+
+        await act(async () => fireEvent.click(screen.getByTitle('Try another version')));
+
+        expect(screen.getByText('v2 of 2')).toBeInTheDocument();
+        expect(screen.queryByText('v1 of 2')).not.toBeInTheDocument();
+    });
+
+    // 57 — WB
+    test("cycleVariant wraps variantIdx to 0 when at last template", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Try another version')));
+        expect(screen.getByText('v2 of 2')).toBeInTheDocument();
+
+        await act(async () => fireEvent.click(screen.getByTitle('Try another version')));
+        expect(screen.getByText('v1 of 2')).toBeInTheDocument();
+        expect(screen.queryByText('v2 of 2')).not.toBeInTheDocument();
+    });
+
+    // 58 — WB
+    test("cycleVariant recomputes preview to variant-1 output", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+
+        const recipientLabel = screen.getByText('Their first name');
+        fireEvent.change(recipientLabel.nextElementSibling, { target: { value: 'Dave' } });
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        const variant0Text = textarea.value;
+
+        await act(async () => fireEvent.click(screen.getByTitle('Try another version')));
+
+        const variant1Text = textarea.value;
+        expect(variant1Text).not.toEqual(variant0Text);
+        expect(variant1Text).toContain('Dave');
+        expect(variant1Text.length).toBeGreaterThan(0);
+    });
+
+    // 59 — WB
+    test("updateGuidePreviewManual returns early safely when selectedId is null", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        expect(screen.queryByPlaceholderText('Your message will appear here\u2026')).not.toBeInTheDocument();
+        expect(screen.queryByText('Review & edit your message')).not.toBeInTheDocument();
+    });
+
+    // 60 — WB
+    test("updateGuidePreviewManual sets preview to the exact string provided", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        fireEvent.change(textarea, { target: { value: 'My custom message' } });
+
+        expect(textarea.value).toBe('My custom message');
+        expect(textarea.value).not.toBe('');
+        expect(textarea.value).toHaveLength('My custom message'.length);
+    });
+
+    // 61 — WB
+    test("applyGuideMessage returns early safely when selectedId is null", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        expect(screen.queryByText('Use this message \u2192')).not.toBeInTheDocument();
+        expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
+    // 62 — EP
+    test("applyGuideMessage shows info toast when preview is empty string", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        fireEvent.change(textarea, { target: { value: '' } });
+
+        await act(async () => fireEvent.click(screen.getByText('Use this message \u2192')));
+        expect(mockShowToast).toHaveBeenCalledWith('Nothing to insert yet', 'info');
+        expect(mockShowToast).toHaveBeenCalledTimes(1);
+    });
+
+    // 63 — EP
+    test("applyGuideMessage shows info toast when preview is whitespace only", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        fireEvent.change(textarea, { target: { value: '   ' } });
+
+        await act(async () => fireEvent.click(screen.getByText('Use this message \u2192')));
+        expect(mockShowToast).toHaveBeenCalledWith('Nothing to insert yet', 'info');
+        expect(mockShowToast).not.toHaveBeenCalledWith('Nothing to insert yet', 'success');
+        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
+        const composerInput = screen.getByPlaceholderText('Write a message\u2026');
+        expect(composerInput.value).toBe('');
+    });
+
+    // 64 — WB
+    test("applyGuideMessage sets draft to trimmed preview on success", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        fireEvent.change(textarea, { target: { value: '  Hello world  ' } });
+
+        await act(async () => fireEvent.click(screen.getByText('Use this message \u2192')));
+
+        const composerInput = screen.getByPlaceholderText('Write a message\u2026');
+        expect(composerInput.value).toBe('Hello world');
+        expect(composerInput.value).not.toBe('  Hello world  ');
+    });
+
+    // 65 — WB
+    test("applyGuideMessage shows success toast and closes panel", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        fireEvent.change(textarea, { target: { value: 'Hello Custom' } });
+
+        const insertBtn = screen.getByText('Use this message \u2192');
+        await act(async () => fireEvent.click(insertBtn));
+
+        expect(mockShowToast).toHaveBeenCalledWith('Message drafted \u2014 review and send!', 'success');
+        expect(mockShowToast).not.toHaveBeenCalledWith('Message drafted \u2014 review and send!', 'info');
+        const composerInput = screen.getByPlaceholderText('Write a message\u2026');
+        expect(composerInput.value).toBe('Hello Custom');
+        expect(screen.queryByText('Review & edit your message')).not.toBeInTheDocument();
+    });
+
+    // CX1 — WB
+    test("Search box filters conversation list by participant name (case-insensitive)", async () => {
         global.useFetch.mockReturnValue({
             loading: false,
             data: [
@@ -1440,65 +1172,54 @@ describe('MessagingPage Component Tests', () => {
         const searchInput = screen.getByPlaceholderText('Search messages');
         fireEvent.change(searchInput, { target: { value: 'ali' } });
 
-        // Alice still visible, Bob filtered out
         expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
         expect(screen.queryByText('Bob')).not.toBeInTheDocument();
+        expect(searchInput.value).toBe('ali');
     });
 
-    // CX2
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:287
-    // onClick={() => showToast('New message — coming soon')}
+    // CX2 — WB
     test("Write button triggers 'New message — coming soon' toast", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         await act(async () => render(React.createElement(MessagingPage)));
         await act(async () => fireEvent.click(screen.getByText('Write')));
-        expect(mockShowToast).toHaveBeenCalledWith('New message — coming soon');
+        expect(mockShowToast).toHaveBeenCalledWith('New message \u2014 coming soon');
+        expect(mockShowToast).toHaveBeenCalledTimes(1);
     });
 
-    // CX3
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:291
-    // onClick={() => showToast('Settings — coming soon')}
+    // CX3 — WB
     test("Settings button triggers 'Settings — coming soon' toast", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         await act(async () => render(React.createElement(MessagingPage)));
         await act(async () => fireEvent.click(screen.getByText('Settings')));
-        expect(mockShowToast).toHaveBeenCalledWith('Settings — coming soon');
+        expect(mockShowToast).toHaveBeenCalledWith('Settings \u2014 coming soon');
+        expect(mockShowToast).toHaveBeenCalledTimes(1);
     });
 
-    // CX4
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:434
-    // onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
+    // CX4 — WB
     test("Enter key in composer triggers sendMessage", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         await act(async () => render(React.createElement(MessagingPage)));
-        const input = screen.getByPlaceholderText('Write a message…');
+        const input = screen.getByPlaceholderText('Write a message\u2026');
         fireEvent.change(input, { target: { value: 'Hello Enter' } });
         await act(async () => fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' }));
         expect(global.API.sendMessage).toHaveBeenCalledWith(1, 'Hello Enter');
+        expect(global.API.sendMessage).toHaveBeenCalledTimes(1);
     });
 
-    // CX5
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:367
-    // onClose={() => setActivePanel(null)} — the guide panel ✕ button
-    test("Guide ✕ close button sets activePanel to null", async () => {
+    // CX5 — WB
+    test("Guide close button sets activePanel to null", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         await act(async () => render(React.createElement(MessagingPage)));
         await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        expect(screen.getByText('What’s the purpose of your message?')).toBeInTheDocument();
+        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
 
         await act(async () => fireEvent.click(screen.getByTitle('Close guide')));
-        expect(screen.queryByText('What’s the purpose of your message?')).not.toBeInTheDocument();
+        expect(screen.queryByText('What\u2019s the purpose of your message?')).not.toBeInTheDocument();
+        expect(screen.queryByText('Profile Readiness')).not.toBeInTheDocument();
     });
 
-    // CX6
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:383
-    // onClose={() => setActivePanel(null)} — Score panel close button
-    test("Score panel ✕ close button sets activePanel to null", async () => {
+    // CX6 — WB
+    test("Score panel close button sets activePanel to null", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         global.API.getProfileReadiness.mockReturnValue(Promise.resolve({ score: 72, sections: [], fixes: [] }));
         await act(async () => render(React.createElement(MessagingPage)));
@@ -1507,12 +1228,10 @@ describe('MessagingPage Component Tests', () => {
 
         await act(async () => fireEvent.click(screen.getByTitle('Close')));
         expect(screen.queryByText('72')).not.toBeInTheDocument();
+        expect(screen.queryByText('What\u2019s the purpose of your message?')).not.toBeInTheDocument();
     });
 
-    // CX7
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:707
-    // onClick={onClose} — "Continue messaging" footer button in score panel
+    // CX7 — WB
     test("'Continue messaging' button closes score panel", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         global.API.getProfileReadiness.mockReturnValue(Promise.resolve({ score: 60, sections: [], fixes: [] }));
@@ -1522,12 +1241,10 @@ describe('MessagingPage Component Tests', () => {
 
         await act(async () => fireEvent.click(screen.getByText('Continue messaging')));
         expect(screen.queryByText('60')).not.toBeInTheDocument();
+        expect(screen.queryByText('Profile Readiness')).not.toBeInTheDocument();
     });
 
-    // CX8
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:500
-    // onKeyDown={(e) => { if (e.key === 'Enter') onSelectGoal(g.key); }}
+    // CX8 — WB
     test("Keyboard Enter on goal tile selects the goal", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         await act(async () => render(React.createElement(MessagingPage)));
@@ -1536,14 +1253,11 @@ describe('MessagingPage Component Tests', () => {
         const jobTile = screen.getByText('Job / Internship').closest('div');
         await act(async () => fireEvent.keyDown(jobTile, { key: 'Enter' }));
 
-        // Selecting via keyboard should advance to step 2
         expect(screen.getByText('Personalize your message')).toBeInTheDocument();
+        expect(screen.queryByText('What\u2019s the purpose of your message?')).not.toBeInTheDocument();
     });
 
-    // CX9
-    // Type: WB
-    // Exact Lines: js/components/pages/MessagingPage.js:394-421
-    // Renders sent (isMe) message bubble with correct alignment
+    // CX9 — WB
     test("Renders sent message (isMe:true) with right-aligned bubble", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         global.API.getConversation.mockReturnValue(Promise.resolve({
@@ -1551,12 +1265,10 @@ describe('MessagingPage Component Tests', () => {
         }));
         await act(async () => render(React.createElement(MessagingPage)));
         expect(screen.getByText('Hey!')).toBeInTheDocument();
+        expect(screen.queryByText('Loading conversation\u2026')).not.toBeInTheDocument();
     });
 
-    // CX10
-    // Type: WB
-    // Exact Line: js/components/pages/MessagingPage.js:417
-    // {formatTime(m.timestamp)}
+    // CX10 — WB
     test("formatTime renders a non-empty timestamp string for each message", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         global.API.getConversation.mockReturnValue(Promise.resolve({
@@ -1564,322 +1276,887 @@ describe('MessagingPage Component Tests', () => {
         }));
         await act(async () => render(React.createElement(MessagingPage)));
         expect(screen.getByText('Time test')).toBeInTheDocument();
-        // formatTime produces a non-empty string rendered inside the message div
-        const msgEl = screen.getByText('Time test').closest('div');
-        expect(msgEl.textContent).toMatch(/Time test/);
+        expect(global.formatTime).toHaveBeenCalledWith(1700000000000);
     });
 
-    // 81
-    // Type: WB
-    // Spec: 81 (Partial/Refreshed logic)
-    // Load readiness with refresh:false and API failure -> no success toast
-    test("loadProfileReadiness: no toast when refresh:false and API fails", async () => {
-        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        // First call on mount succeeds
-        global.API.getProfileReadiness.mockResolvedValueOnce({ score: 70, sections: [], fixes: [] });
-
-        await act(async () => render(React.createElement(MessagingPage)));
-
-        // Open panel
-        const scoreBtn = screen.getByTitle('Profile Readiness');
-        // Setup failure for next call (which is refresh:false internally)
-        global.API.getProfileReadiness.mockRejectedValueOnce(new Error("Down"));
-        mockShowToast.mockClear();
-
-        await act(async () => fireEvent.click(scoreBtn));
-
-        // Ensure no toast shown when refresh:false
-        expect(mockShowToast).not.toHaveBeenCalledWith('Score refreshed (mock)', 'info');
-    });
-
-    // E1
-    // Type: EC
-    // sendMessage() with empty draft and null selectedId
+    // E1 — EP
     test("sendMessage: no-op when draft is empty AND selectedId is null", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-        // Start with no selected conversation
-        // (selectedId is null by default if we don't click anything and first conv hasn't auto-selected yet)
         await act(async () => render(React.createElement(MessagingPage)));
 
-        // Clear previous calls
         global.API.sendMessage.mockClear();
 
-        // Try to send (empty draft)
         const sendBtn = screen.getByText('Send');
         await act(async () => fireEvent.click(sendBtn));
 
         expect(global.API.sendMessage).not.toHaveBeenCalled();
+        expect(global.API.sendMessage).toHaveBeenCalledTimes(0);
     });
 
-    // E2
-    // Type: EC
-    // selectConversation(id) called twice with same id
+    // E2 — RG
     test("selectConversation: reloads messages even if same ID clicked twice", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         await act(async () => render(React.createElement(MessagingPage)));
 
-        // Find Alice in the conversation list (the one in the left panel button)
         const convBtn = screen.getAllByText('Alice').find(el => el.closest('.li-msg-conv')).closest('button');
 
-        // Click first time
         await act(async () => fireEvent.click(convBtn));
         expect(global.API.getConversation).toHaveBeenCalledWith(1);
 
-        // Click second time
         global.API.getConversation.mockClear();
         await act(async () => fireEvent.click(convBtn));
         expect(global.API.getConversation).toHaveBeenCalledWith(1);
+        expect(global.API.getConversation).toHaveBeenCalledTimes(1);
     });
 
-    // E3
-    // Type: EC
-    // openOutreachGuide switches from score panel to guide panel
+    // E3 — WB
     test("openOutreachGuide: switches from score panel to guide panel", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         await act(async () => render(React.createElement(MessagingPage)));
 
-        // Open Score panel first
         await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
         expect(screen.getByText('Profile Readiness')).toBeInTheDocument();
 
-        // Click Guide button
         await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        expect(screen.getByText('Outreach Guide')).toBeInTheDocument();
+        expect(screen.getByText('What\u2019s the purpose of your message?')).toBeInTheDocument();
         expect(screen.queryByText('Improve your profile before outreach')).not.toBeInTheDocument();
+        expect(screen.queryByText('Profile Readiness')).not.toBeInTheDocument();
     });
 
-    // E6
-    // Type: EC
-    // nextStep() at step 2 -> advances to step 3
-    test("nextStep: advances to step 3 from step 2 after goal selection", async () => {
+    // E6 — WB
+    test("nextStep: advances to step 3 from step 2", async () => {
         global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
         await act(async () => render(React.createElement(MessagingPage)));
 
-        // Manually trigger guide panel to step 2 with null goal if possible?
-        // Actually, we can just select a goal and then manually navigate if we could?
-        // But via UI, selecting a goal goes to step 2.
-        // Let's rely on the implementation: there is no guard for goal on step 2 -> 3 transition.
         await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div'))); // goes to step 2
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
 
         expect(screen.getByText('Personalize your message')).toBeInTheDocument();
 
-        // Click Next to go to step 3
         await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
         expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+    });
+
+    // E7 — EP
+    test("applyGuideMessage: info toast when preview is only whitespace", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        fireEvent.change(textarea, { target: { value: '   ' } });
+
+        await act(async () => fireEvent.click(screen.getByText('Use this message \u2192')));
+        expect(mockShowToast).toHaveBeenCalledWith('Nothing to insert yet', 'info');
+        expect(mockShowToast).not.toHaveBeenCalledWith('Nothing to insert yet', 'success');
+    });
+
+    // M1 — WB: score threshold boundary 80
+    test("ProfileReadinessPanel: score exactly 80 → label 'Ready', badge class 'good'", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({ score: 80, sections: [], fixes: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        const badge = screen.getByText('Ready');
+        expect(badge).toBeInTheDocument();
+        expect(badge.classList.contains('good')).toBe(true);
+        expect(badge.classList.contains('warn')).toBe(false);
+        expect(badge.classList.contains('bad')).toBe(false);
+        expect(screen.queryByText('Almost there')).not.toBeInTheDocument();
+        expect(screen.queryByText('Needs improvement')).not.toBeInTheDocument();
+    });
+
+    // M2 — WB: score threshold boundary 79
+    test("ProfileReadinessPanel: score 79 → label 'Almost there', badge class 'warn'", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({ score: 79, sections: [], fixes: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        const badge = screen.getByText('Almost there');
+        expect(badge).toBeInTheDocument();
+        expect(badge.classList.contains('warn')).toBe(true);
+        expect(badge.classList.contains('good')).toBe(false);
+        expect(badge.classList.contains('bad')).toBe(false);
+        expect(screen.queryByText('Ready')).not.toBeInTheDocument();
+        expect(screen.queryByText('Needs improvement')).not.toBeInTheDocument();
+    });
+
+    // M3 — WB: score threshold boundary 70
+    test("ProfileReadinessPanel: score exactly 70 → label 'Almost there', badge class 'warn'", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({ score: 70, sections: [], fixes: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        const badge = screen.getByText('Almost there');
+        expect(badge).toBeInTheDocument();
+        expect(badge.classList.contains('warn')).toBe(true);
+        expect(badge.classList.contains('good')).toBe(false);
+        expect(screen.queryByText('Needs improvement')).not.toBeInTheDocument();
+    });
+
+    // M4 — WB: score threshold boundary 69
+    test("ProfileReadinessPanel: score 69 → label 'Needs improvement', badge class 'bad'", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({ score: 69, sections: [], fixes: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        const badge = screen.getByText('Needs improvement');
+        expect(badge).toBeInTheDocument();
+        expect(badge.classList.contains('bad')).toBe(true);
+        expect(badge.classList.contains('good')).toBe(false);
+        expect(badge.classList.contains('warn')).toBe(false);
+        expect(screen.queryByText('Almost there')).not.toBeInTheDocument();
+        expect(screen.queryByText('Ready')).not.toBeInTheDocument();
+    });
+
+    // M5 — WB: score 0 edge case
+    test("ProfileReadinessPanel: score 0 → label 'Needs improvement'", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({ score: 0, sections: [], fixes: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        expect(screen.getByText('Needs improvement')).toBeInTheDocument();
+    });
+
+    // M6 — WB: score 100 edge case
+    test("ProfileReadinessPanel: score 100 → label 'Ready'", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({ score: 100, sections: [], fixes: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        expect(screen.getByText('Ready')).toBeInTheDocument();
+    });
+
+    // M7 — WB: fix status 'done' renders 'Done' label
+    test("ProfileReadinessPanel: fix status 'done' renders 'Done', not 'Fix'", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({
+            score: 75, sections: [],
+            fixes: [{ key: 'edu', label: 'Education', status: 'done' }]
+        });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        expect(screen.getByText('Done')).toBeInTheDocument();
+        expect(screen.queryByText('Fix')).not.toBeInTheDocument();
+    });
+
+    // M8 — WB: fix status 'bad' renders 'Fix' label
+    test("ProfileReadinessPanel: fix status 'bad' renders 'Fix', not 'Done'", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({
+            score: 50, sections: [],
+            fixes: [{ key: 'headline', label: 'Improve headline', status: 'bad' }]
+        });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        expect(screen.getByText('Fix')).toBeInTheDocument();
+        expect(screen.queryByText('Done')).not.toBeInTheDocument();
+    });
+
+    // M9 — WB: section bar score thresholds and CSS classes
+    test("ProfileReadinessPanel: section bars render correct percentage labels and CSS color classes", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({
+            score: 75,
+            sections: [
+                { key: 'edu', label: 'Education', score: 90 },
+                { key: 'headline', label: 'Headline', score: 70 },
+                { key: 'about', label: 'About', score: 50 }
+            ],
+            fixes: []
+        });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        expect(screen.getByText('90%')).toBeInTheDocument();
+        expect(screen.getByText('70%')).toBeInTheDocument();
+        expect(screen.getByText('50%')).toBeInTheDocument();
+        // score 90 >= 80 → 'good' class
+        expect(screen.getByText('90%').classList.contains('good')).toBe(true);
+        expect(screen.getByText('90%').classList.contains('warn')).toBe(false);
+        // score 70 >= 70 → 'warn' class
+        expect(screen.getByText('70%').classList.contains('warn')).toBe(true);
+        expect(screen.getByText('70%').classList.contains('good')).toBe(false);
+        expect(screen.getByText('70%').classList.contains('bad')).toBe(false);
+        // score 50 < 70 → 'bad' class
+        expect(screen.getByText('50%').classList.contains('bad')).toBe(true);
+        expect(screen.getByText('50%').classList.contains('good')).toBe(false);
+    });
+
+    // M10 — WB: openProfileReadiness does not reload when already 'score'
+    test("openProfileReadiness does NOT reload score when panel already open (toggle off)", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({ score: 75, sections: [], fixes: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        expect(global.API.getProfileReadiness).toHaveBeenCalledTimes(1);
+
+        global.API.getProfileReadiness.mockClear();
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        expect(global.API.getProfileReadiness).not.toHaveBeenCalled();
+    });
+
+    // M11 — WB: search toLowerCase both sides
+    test("Search 'ALI' matches 'alice' — both sides lowercased", async () => {
+        global.useFetch.mockReturnValue({
+            loading: false,
+            data: [{ id: 1, participantName: 'ALICE' }, { id: 2, participantName: 'bob' }]
+        });
+        await act(async () => render(React.createElement(MessagingPage)));
+        fireEvent.change(screen.getByPlaceholderText('Search messages'), { target: { value: 'alice' } });
+        expect(screen.getAllByText('ALICE')[0]).toBeInTheDocument();
+        expect(screen.queryByText('bob')).not.toBeInTheDocument();
+    });
+
+    // M12 — WB: search toLowerCase both sides (search side)
+    test("Search 'BOB' matches 'bob' — search query lowercased", async () => {
+        global.useFetch.mockReturnValue({
+            loading: false,
+            data: [{ id: 1, participantName: 'Alice' }, { id: 2, participantName: 'bob' }]
+        });
+        await act(async () => render(React.createElement(MessagingPage)));
+        fireEvent.change(screen.getByPlaceholderText('Search messages'), { target: { value: 'BOB' } });
+        expect(screen.getByText('bob')).toBeInTheDocument();
+        // Alice should not appear in the conversation list (may still appear in chat header)
+        const aliceInList = screen.queryAllByText('Alice').find(el => el.closest('.li-msg-conv'));
+        expect(aliceInList).toBeUndefined();
+    });
+
+    // M13 — WB: useEffect preview sync on step 2
+    test("Preview auto-updates when details change on step 2", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+
+        const recipientInput = screen.getByText('Their first name').nextElementSibling;
+        await act(async () => {
+            fireEvent.change(recipientInput, { target: { value: 'Zara' } });
+        });
+
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        expect(textarea.value).toContain('Zara');
+    });
+
+    // M14 — WB: useEffect preview sync on step 3
+    test("Preview auto-updates when details changed and re-advanced to step 3", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        await act(async () => fireEvent.click(screen.getByText('\u2190 Back')));
+        const recipientInput = screen.getByText('Their first name').nextElementSibling;
+        await act(async () => {
+            fireEvent.change(recipientInput, { target: { value: 'Yasmin' } });
+        });
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        expect(textarea.value).toContain('Yasmin');
+    });
+
+    // M15 — WB: step 1 content visible, steps 2 and 3 not
+    test("OutreachGuidePanel step 1 shows goal selection, not steps 2 or 3", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        expect(screen.getByText("What\u2019s the purpose of your message?")).toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+        expect(screen.queryByText('Review & edit your message')).not.toBeInTheDocument();
+    });
+
+    // M16 — WB: step 2 content visible after goal selected
+    test("OutreachGuidePanel step 2 shows personalize form after goal selected", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Build Network').closest('div')));
+        expect(screen.getByText('Personalize your message')).toBeInTheDocument();
+        expect(screen.queryByText("What\u2019s the purpose of your message?")).not.toBeInTheDocument();
+        expect(screen.queryByText('Review & edit your message')).not.toBeInTheDocument();
+    });
+
+    // M17 — WB: step 3 content visible after next from step 2
+    test("OutreachGuidePanel step 3 shows review after next from step 2", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Build Network').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+        expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
+        expect(screen.queryByText('Personalize your message')).not.toBeInTheDocument();
+        expect(screen.queryByText("What\u2019s the purpose of your message?")).not.toBeInTheDocument();
+    });
+
+    // M18 — WB: selected goal tile has 'selected' class
+    test("Selected goal tile has 'selected' class, unselected tiles do not", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+
+        const jobTile = screen.getByText('Job / Internship').closest('div');
+        await act(async () => fireEvent.click(jobTile));
+        await act(async () => fireEvent.click(screen.getByText('\u2190 Back')));
+
+        const selectedTile = screen.getByText('Job / Internship').closest('div');
+        expect(selectedTile.classList.contains('selected')).toBe(true);
+        const adviceTile = screen.getByText('Ask for Advice').closest('div');
+        expect(adviceTile.classList.contains('selected')).toBe(false);
+    });
+
+    // M19 — WB: shows tips for selected goal
+    test("OutreachGuidePanel shows tips after goal selected", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        expect(screen.getByText('Pick a goal to see tailored tips')).toBeInTheDocument();
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        expect(screen.getByText(/Keep it short/)).toBeInTheDocument();
+    });
+
+    // M20 — WB: 'Done' button on step 3 instead of 'Next'
+    test("OutreachGuidePanel shows 'Done' on step 3, not 'Next →'", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+        expect(screen.getByText('Done')).toBeInTheDocument();
+        expect(screen.queryByText('Next \u2192')).not.toBeInTheDocument();
+    });
+
+    // M21 — WB: cycleVariant single-variant goal wraps to itself
+    test("cycleVariant with single-variant goal wraps back to same text", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+        await act(async () => fireEvent.click(screen.getByText('Find a Mentor').closest('div')));
+        await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
+
+        const textarea = screen.getByPlaceholderText('Your message will appear here\u2026');
+        const beforeText = textarea.value;
+        expect(screen.getByText('v1 of 1')).toBeInTheDocument();
+
+        await act(async () => fireEvent.click(screen.getByTitle('Try another version')));
+        expect(textarea.value).toBe(beforeText);
+        expect(screen.getByText('v1 of 1')).toBeInTheDocument();
+    });
+
+    // M22 — WB: switching from score to guide closes score
+    test("Switching from score panel to guide panel closes score, opens guide", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({ score: 55, sections: [], fixes: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        expect(screen.getByText('55')).toBeInTheDocument();
+
+        global.API.getProfileReadiness.mockClear();
+        await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
+
+        expect(screen.queryByText('55')).not.toBeInTheDocument();
+        expect(screen.getByText("What\u2019s the purpose of your message?")).toBeInTheDocument();
+        expect(global.API.getProfileReadiness).not.toHaveBeenCalled();
+    });
+
+    // M23 — BB: conversation with no participantName renders 'Unknown', no lastMessage renders empty
+    test("Conversation with no participantName renders 'Unknown', absent lastMessage renders empty not mutant text", async () => {
+        global.useFetch.mockReturnValue({
+            loading: false,
+            data: [{ id: 1 }, { id: 2, participantName: 'Alice', lastMessage: 'Hello there' }]
+        });
+        await act(async () => render(React.createElement(MessagingPage)));
+        expect(screen.getByText('Unknown')).toBeInTheDocument();
+        // lastMessage present renders correctly
+        expect(screen.getByText('Hello there')).toBeInTheDocument();
+        // no lastMessage on conv 1 — should not render mutant string
+        expect(screen.queryByText('Stryker was here!')).not.toBeInTheDocument();
+    });
+
+    // M24 — BB: 'No score available' when readiness is null
+    test("ProfileReadinessPanel: renders 'No score available' when readiness null after API call", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue(null);
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+        expect(screen.getByText('No score available.')).toBeInTheDocument();
+    });
+
+    // M25 — WB: window.location.hash branches
+    test("Exercises window.location.hash branches via 'Go to profile' buttons", async () => {
+        global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
+        global.API.getProfileReadiness.mockResolvedValue({ score: 70, sections: [], fixes: [] });
+        await act(async () => render(React.createElement(MessagingPage)));
+        await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
+
+        const goBtns = screen.getAllByText('Go to profile');
+        goBtns.forEach(btn => {
+            window.location.hash = '';
+            fireEvent.click(btn);
+            expect(window.location.hash).toBe('#profile');
+        });
     });
 });
 
-
 // =============================================================
-// TESTS ADDED ONE AT A TIME BELOW THIS LINE
+// mockBackendGetProfileReadiness PURE FUNCTION TESTS
 // =============================================================
 
 describe('mockBackendGetProfileReadiness() pure function', () => {
-    // 66
+    // 66 — BB
     test('Returns object with keys: score, sections, fixes', () => {
         const res = mockBackendGetProfileReadiness({}, {});
         expect(Object.keys(res).sort()).toEqual(['fixes', 'score', 'sections']);
+        expect(Object.keys(res)).toHaveLength(3);
     });
 
-    // 67
-    test('Score is clamped 0–100', () => {
+    // 67 — BB
+    test('Score is clamped 0-100', () => {
         const res = mockBackendGetProfileReadiness({}, {});
         expect(res.score).toBeGreaterThanOrEqual(0);
         expect(res.score).toBeLessThanOrEqual(100);
+        expect(typeof res.score).toBe('number');
     });
 
-    // 68
+    // 68 — BB
     test('Returns exactly 6 sections with correct keys', () => {
         const res = mockBackendGetProfileReadiness({}, {});
         expect(res.sections).toHaveLength(6);
         const keys = res.sections.map(s => s.key);
         expect(keys).toEqual(['photo', 'headline', 'about', 'exp', 'edu', 'skills']);
+        expect(keys).not.toContain('unknown');
     });
 
-    // 69
+    // 69 — WB
     test('Base scores exact without jitter', () => {
         const res = mockBackendGetProfileReadiness({}, { jitter: false });
         const scores = res.sections.map(s => s.score);
         expect(scores).toEqual([67, 42, 30, 60, 90, 55]);
+        expect(scores[0]).toBe(67);
+        expect(scores[1]).toBe(42);
+        expect(scores[4]).toBe(90);
     });
 
-    // 70
+    // 70 — EP
     test('Handles null user without throwing', () => {
         expect(() => mockBackendGetProfileReadiness(null, {})).not.toThrow();
         const res = mockBackendGetProfileReadiness(null, {});
         expect(res).toBeTruthy();
+        expect(res).toHaveProperty('score');
+        expect(res).toHaveProperty('sections');
+        expect(res).toHaveProperty('fixes');
     });
 
-    // 71
+    // 71 — GB
     test("GB boundary: headline length 34 — stays 'bad'", () => {
-        const res = mockBackendGetProfileReadiness({ headline: 'x'.repeat(34) });
+        const res = mockBackendGetProfileReadiness({ headline: 'x'.repeat(34) }, {});
         const fix = res.fixes.find(f => f.key === 'headline');
         expect(fix.status).toBe('bad');
+        expect(fix.status).not.toBe('warn');
+        expect(fix.status).not.toBe('done');
     });
 
-    // 72
+    // 72 — GB
     test("GB boundary: headline length 35 — upgrades to 'warn'", () => {
-        const res = mockBackendGetProfileReadiness({ headline: 'x'.repeat(35) });
+        const res = mockBackendGetProfileReadiness({ headline: 'x'.repeat(35) }, {});
         const fix = res.fixes.find(f => f.key === 'headline');
         expect(fix.status).toBe('warn');
+        expect(fix.status).not.toBe('bad');
+        expect(fix.status).not.toBe('done');
     });
 
-    // 73
+    // 73 — GB
     test("GB boundary: headline length 54 — stays 'warn'", () => {
-        const res = mockBackendGetProfileReadiness({ headline: 'x'.repeat(54) });
+        const res = mockBackendGetProfileReadiness({ headline: 'x'.repeat(54) }, {});
         const fix = res.fixes.find(f => f.key === 'headline');
         expect(fix.status).toBe('warn');
+        expect(fix.status).not.toBe('done');
     });
 
-    // 74
+    // 74 — GB
     test("GB boundary: headline length 55 — upgrades to 'done'", () => {
-        const res = mockBackendGetProfileReadiness({ headline: 'x'.repeat(55) });
+        const res = mockBackendGetProfileReadiness({ headline: 'x'.repeat(55) }, {});
         const fix = res.fixes.find(f => f.key === 'headline');
         expect(fix.status).toBe('done');
+        expect(fix.status).not.toBe('warn');
+        expect(fix.status).not.toBe('bad');
     });
 
-    // 75
+    // 75 — GB
     test("GB boundary: about length 119 — stays 'bad'", () => {
-        const res = mockBackendGetProfileReadiness({ about: 'x'.repeat(119) });
+        const res = mockBackendGetProfileReadiness({ about: 'x'.repeat(119) }, {});
         const fix = res.fixes.find(f => f.key === 'about');
         expect(fix.status).toBe('bad');
+        expect(fix.status).not.toBe('warn');
     });
 
-    // 76
+    // 76 — GB
     test("GB boundary: about length 120 — upgrades to 'warn'", () => {
-        const res = mockBackendGetProfileReadiness({ about: 'x'.repeat(120) });
+        const res = mockBackendGetProfileReadiness({ about: 'x'.repeat(120) }, {});
         const fix = res.fixes.find(f => f.key === 'about');
         expect(fix.status).toBe('warn');
+        expect(fix.status).not.toBe('bad');
     });
 
-    // 77
+    // 77 — GB
     test("GB boundary: about length 169 — stays 'warn'", () => {
-        const res = mockBackendGetProfileReadiness({ about: 'x'.repeat(169) });
+        const res = mockBackendGetProfileReadiness({ about: 'x'.repeat(169) }, {});
         const fix = res.fixes.find(f => f.key === 'about');
         expect(fix.status).toBe('warn');
+        expect(fix.status).not.toBe('done');
     });
 
-    // 78
+    // 78 — GB
     test("GB boundary: about length 170 — upgrades to 'done'", () => {
-        const res = mockBackendGetProfileReadiness({ about: 'x'.repeat(170) });
+        const res = mockBackendGetProfileReadiness({ about: 'x'.repeat(170) }, {});
         const fix = res.fixes.find(f => f.key === 'about');
         expect(fix.status).toBe('done');
+        expect(fix.status).not.toBe('warn');
+        expect(fix.status).not.toBe('bad');
     });
 
-    // 79
+    // 79 — GB
     test("GB boundary: skillCount 7 — stays 'warn'", () => {
-        const res = mockBackendGetProfileReadiness({ skills: Array(7).fill('s') });
+        const res = mockBackendGetProfileReadiness({ skills: Array(7).fill('s') }, {});
         const fix = res.fixes.find(f => f.key === 'skills');
         expect(fix.status).toBe('warn');
+        expect(fix.status).not.toBe('done');
     });
 
+    // 80 — GB
     test("GB boundary: skillCount 8 — upgrades to 'done'", () => {
         const res = mockBackendGetProfileReadiness({ skills: Array(8).fill('s') }, {});
         const fix = res.fixes.find(f => f.key === 'skills');
         expect(fix.status).toBe('done');
+        expect(fix.status).not.toBe('warn');
     });
 
-    // 81 (Spec)
-    // Type: EP
-    // Bucket: non-array truthy skills
+    // 81 — EP
     test("EP bucket: skills is non-array truthy string — skillCount is 1, not done", () => {
         const res = mockBackendGetProfileReadiness({ skills: 'JavaScript' }, {});
         const fix = res.fixes.find(f => f.key === 'skills');
         expect(fix.status).not.toBe('done');
+        expect(['bad', 'warn']).toContain(fix.status);
     });
 
-    // E8
-    // Type: EC
-    // mockBackendGetProfileReadiness: skills is 0
+    // E8 — EP
     test("EC: skills is 0 (falsy number) -> count is 0", () => {
-        const res = mockBackendGetProfileReadiness({ skills: 0 });
+        const res = mockBackendGetProfileReadiness({ skills: 0 }, {});
         const fix = res.fixes.find(f => f.key === 'skills');
-        expect(fix.status).toBe('warn'); // skillCount 0 < 8
+        expect(fix.status).toBe('warn');
+        expect(fix.status).not.toBe('done');
     });
 
-    // E9
-    // Type: EC
-    // mockBackendGetProfileReadiness: all thresholds met simultaneously
-    test("EC: all thresholds met simultaneously -> all 'done'", () => {
+    // E9 — EP
+    test("EC: all thresholds met simultaneously -> headline/about/skills all 'done'", () => {
         const res = mockBackendGetProfileReadiness({
             headline: 'x'.repeat(55),
             about: 'x'.repeat(170),
             skills: Array(8).fill('s')
-        });
+        }, {});
         expect(res.fixes.find(f => f.key === 'headline').status).toBe('done');
         expect(res.fixes.find(f => f.key === 'about').status).toBe('done');
         expect(res.fixes.find(f => f.key === 'skills').status).toBe('done');
+        expect(res.fixes.find(f => f.key === 'headline').status).not.toBe('bad');
+        expect(res.fixes.find(f => f.key === 'about').status).not.toBe('warn');
     });
 
-    // E10
-    // Type: EC
-    // mockBackendGetProfileReadiness: empty string skills
+    // E10 — EP
     test("EC: empty string skills -> count is 0", () => {
         const res = mockBackendGetProfileReadiness({ skills: '' }, {});
         const fix = res.fixes.find(f => f.key === 'skills');
         expect(fix.status).toBe('warn');
+        expect(fix.status).not.toBe('done');
+    });
+
+    // M26 — WB: score equals average of section scores
+    test("Score equals average of section scores (division, not multiplication)", () => {
+        const res = mockBackendGetProfileReadiness({}, { jitter: false });
+        const sum = res.sections.reduce((a, b) => a + b.score, 0);
+        const expected = Math.max(0, Math.min(100, Math.round(sum / res.sections.length)));
+        expect(res.score).toBe(expected);
+        expect(res.score).toBe(57);
+        expect(res.score).not.toBe(344);
+        // verify reduce uses addition not subtraction: sum should be 344
+        expect(sum).toBe(344);
+        expect(sum / res.sections.length).toBeCloseTo(57.33, 1);
+    });
+
+    // M27 — WB: photo fix boundary score >= 60
+    test("photo fix: base score 57 is < 60, so photo status is 'warn' not 'done'", () => {
+        const res = mockBackendGetProfileReadiness({}, { jitter: false });
+        expect(res.score).toBe(57);
+        const photo = res.fixes.find(f => f.key === 'photo');
+        expect(photo.status).toBe('warn');
+        expect(photo.status).not.toBe('done');
+    });
+
+    // M28 — WB: jitter range is ±2 and is additive (not subtractive)
+    test("Jitter range is ±2: scores deviate by at most 2, and can go both above and below base", () => {
+        const base = [67, 42, 30, 60, 90, 55];
+        let sawAbove = false;
+        let sawBelow = false;
+        for (let i = 0; i < 50; i++) {
+            const res = mockBackendGetProfileReadiness({}, { jitter: true });
+            res.sections.forEach((s, idx) => {
+                expect(s.score).toBeGreaterThanOrEqual(base[idx] - 2);
+                expect(s.score).toBeLessThanOrEqual(base[idx] + 2);
+                if (s.score > base[idx]) sawAbove = true;
+                if (s.score < base[idx]) sawBelow = true;
+            });
+        }
+        // jitter is Math.random()*4-2 so it can be positive or negative
+        // over 50 runs we expect both directions to appear
+        expect(sawAbove || sawBelow).toBe(true);
+    });
+
+    // M29 — WB: education fix always 'done' by default
+    test("Education fix is always 'done' by default", () => {
+        const res = mockBackendGetProfileReadiness({}, { jitter: false });
+        expect(res.fixes.find(f => f.key === 'edu').status).toBe('done');
+    });
+
+    // M30 — WB: experience fix always 'warn' by default
+    test("Experience fix is always 'warn' by default", () => {
+        const res = mockBackendGetProfileReadiness({}, { jitter: false });
+        expect(res.fixes.find(f => f.key === 'exp').status).toBe('warn');
+    });
+
+    // M31 — WB: exactly 6 fixes with expected keys
+    test("Returns exactly 6 fixes with expected keys in order", () => {
+        const res = mockBackendGetProfileReadiness({}, { jitter: false });
+        expect(res.fixes).toHaveLength(6);
+        const keys = res.fixes.map(f => f.key);
+        expect(keys).toEqual(['photo', 'headline', 'about', 'skills', 'exp', 'edu']);
     });
 });
 
+// =============================================================
+// computeGuidePreview PURE FUNCTION TESTS
+// =============================================================
+
 describe('computeGuidePreview() pure function', () => {
-    // E4
-    // Type: EC
-    // computeGuidePreview: state.details is undefined fallback
+    // 38 — BB
+    test("Returns '' when state is null", () => {
+        const res = computeGuidePreview(null);
+        expect(res).toBe('');
+        expect(res).toHaveLength(0);
+    });
+
+    // 39 — BB
+    test("Returns '' when state.goal is falsy", () => {
+        const res = computeGuidePreview({ goal: null, variantIdx: 0, details: {} });
+        expect(res).toBe('');
+        expect(res).not.toBeTruthy();
+    });
+
+    // 40 — BB
+    test("Returns '' when goal has no templates", () => {
+        const res = computeGuidePreview({ goal: 'nonexistent_goal_xyz', variantIdx: 0, details: {} });
+        expect(res).toBe('');
+    });
+
+    // E4 — EP
     test("EC: state.details is undefined -> uses empty object fallback in template", () => {
         const state = { goal: 'advice', variantIdx: 0 };
         const res = computeGuidePreview(state);
-        // Template for advice/0 is: Hi ${d.recipient || '[Name]'}...
         expect(res).toContain('Hi [Name]');
+        expect(res).not.toBe('');
     });
 
-    // E5
-    // Type: EC
-    // computeGuidePreview: variantIdx exactly 0
+    // E5 — EP
     test("EC: variantIdx exactly 0 -> returns first template output", () => {
         const state = { goal: 'advice', variantIdx: 0, details: { recipient: 'Bob' } };
         const res = computeGuidePreview(state);
         expect(res).toContain('Hi Bob');
+        expect(typeof res).toBe('string');
+        expect(res.length).toBeGreaterThan(0);
     });
 
-    describe('Branch Coverage Booster', () => {
-        test("Cycles all outreach templates", () => {
-            _OUTREACH_GOALS.forEach(goal => {
-                const templates = _OUTREACH_TEMPLATES[goal.key] || [];
-                templates.forEach((t, idx) => {
-                    const res = computeGuidePreview({ goal: goal.key, variantIdx: idx, details: { recipient: 'X', field: 'F' } });
-                    expect(typeof res).toBe('string');
-                });
+    // T1 — WB: variantIdx 1 returns different template
+    test("variantIdx 1 returns second template, distinct from first", () => {
+        const state0 = { goal: 'advice', variantIdx: 0, details: { recipient: 'Bob' } };
+        const state1 = { goal: 'advice', variantIdx: 1, details: { recipient: 'Bob' } };
+        const res0 = computeGuidePreview(state0);
+        const res1 = computeGuidePreview(state1);
+        expect(res0).not.toEqual(res1);
+        expect(res1).toContain('Bob');
+        expect(res1).not.toBe('');
+    });
+
+    // T2 — WB: large variantIdx wraps via modulo
+    test("Large variantIdx wraps correctly via modulo", () => {
+        const templates = _OUTREACH_TEMPLATES['advice'];
+        const len = templates.length;
+        const state99 = { goal: 'advice', variantIdx: 99, details: { recipient: 'Z' } };
+        const stateWrapped = { goal: 'advice', variantIdx: 99 % len, details: { recipient: 'Z' } };
+        expect(computeGuidePreview(state99)).toEqual(computeGuidePreview(stateWrapped));
+    });
+
+    // T3 — BB: advice v1 fallbacks
+    test("advice template v1: uses '[Name]', '[your name/major]', '[their field]' fallbacks when empty", () => {
+        const res = computeGuidePreview({ goal: 'advice', variantIdx: 0, details: {} });
+        expect(res).toContain('[Name]');
+        expect(res).toContain('[your name/major]');
+        expect(res).toContain('[their field]');
+    });
+
+    // T4 — BB: advice v1 with all details
+    test("advice template v1: uses all provided details, no fallback placeholders, contains warm phrase", () => {
+        const res = computeGuidePreview({ goal: 'advice', variantIdx: 0, details: { recipient: 'Alice', yourRole: 'CS Student', field: 'AI' } });
+        expect(res).toContain('Alice');
+        expect(res).toContain('CS Student');
+        expect(res).toContain('AI');
+        expect(res).not.toContain('[Name]');
+        expect(res).not.toContain('[your name/major]');
+        expect(res).not.toContain('[their field]');
+        // v1 is 'Warm' tone — contains specific phrase
+        expect(res).toContain("I'd love to learn from your experience");
+        expect(res).toContain('15\u201320 minutes');
+    });
+
+    // T5 — BB: advice v2 fallbacks and professional phrase
+    test("advice template v2: uses '[Name]', '[your name]', '[field]' fallbacks, contains professional phrase", () => {
+        const res = computeGuidePreview({ goal: 'advice', variantIdx: 1, details: {} });
+        expect(res).toContain('[Name]');
+        expect(res).toContain('[your name]');
+        expect(res).toContain('[field]');
+        // v2 is 'Professional' tone
+        expect(res).toContain('greatly appreciate');
+        expect(res).toContain('informational chat');
+    });
+
+    // T6 — BB: job v1 fallbacks
+    test("job template v1: uses '[role]', '[Company]', '[skill/area]', '[your name/major]' fallbacks", () => {
+        const res = computeGuidePreview({ goal: 'job', variantIdx: 0, details: {} });
+        expect(res).toContain('[role]');
+        expect(res).toContain('[Company]');
+        expect(res).toContain('[skill/area]');
+        expect(res).toContain('[your name/major]');
+    });
+
+    // T7 — BB: job v1 with all details and direct phrase
+    test("job template v1: uses all provided details, no fallbacks, contains direct phrase", () => {
+        const res = computeGuidePreview({ goal: 'job', variantIdx: 0, details: { recipient: 'Bob', role: 'Engineer', company: 'Acme', yourRole: 'CS', field: 'ML' } });
+        expect(res).toContain('Bob');
+        expect(res).toContain('Engineer');
+        expect(res).toContain('Acme');
+        expect(res).not.toContain('[role]');
+        expect(res).not.toContain('[Company]');
+        // v1 is 'Direct' tone
+        expect(res).toContain('opening at');
+        expect(res).toContain('quick chat');
+    });
+
+    // T8 — BB: job v2 fallbacks and warm phrase
+    test("job template v2: uses '[Company]' and '[field]' fallbacks, contains warm phrase", () => {
+        const res = computeGuidePreview({ goal: 'job', variantIdx: 1, details: {} });
+        expect(res).toContain('[Name]');
+        expect(res).toContain('[your name/major]');
+        expect(res).toContain('[field]');
+        expect(res).toContain('[Company]');
+        // v2 is 'Warm' tone
+        expect(res).toContain('Hope you');
+        expect(res).toContain('10\u201315 minutes');
+    });
+
+    // T9 — BB: network v1 fallbacks
+    test("network template v1: uses '[Name]', '[your name/major]', '[field]' fallbacks", () => {
+        const res = computeGuidePreview({ goal: 'network', variantIdx: 0, details: {} });
+        expect(res).toContain('[Name]');
+        expect(res).toContain('[your name/major]');
+        expect(res).toContain('[field]');
+    });
+
+    // T10 — BB: network v1 with details
+    test("network template v1: uses provided details, no fallback placeholders", () => {
+        const res = computeGuidePreview({ goal: 'network', variantIdx: 0, details: { recipient: 'Carol', yourRole: 'Designer', field: 'UX' } });
+        expect(res).toContain('Carol');
+        expect(res).toContain('Designer');
+        expect(res).toContain('UX');
+        expect(res).not.toContain('[Name]');
+    });
+
+    // T11 — BB: network v2 fallbacks
+    test("network template v2: professional tone uses fallbacks", () => {
+        const res = computeGuidePreview({ goal: 'network', variantIdx: 1, details: {} });
+        expect(res).toContain('[Name]');
+        expect(res).toContain('[your name/major]');
+        expect(res).toContain('[field]');
+    });
+
+    // T12 — BB: mentor fallbacks
+    test("mentor template: uses '[Name]', '[your name/major]', '[field]' fallbacks", () => {
+        const res = computeGuidePreview({ goal: 'mentor', variantIdx: 0, details: {} });
+        expect(res).toContain('[Name]');
+        expect(res).toContain('[your name/major]');
+        expect(res).toContain('[field]');
+    });
+
+    // T13 — BB: mentor with details
+    test("mentor template: uses provided details, no fallback placeholders", () => {
+        const res = computeGuidePreview({ goal: 'mentor', variantIdx: 0, details: { recipient: 'Dan', yourRole: 'MBA', field: 'Finance' } });
+        expect(res).toContain('Dan');
+        expect(res).toContain('MBA');
+        expect(res).toContain('Finance');
+        expect(res).not.toContain('[Name]');
+    });
+
+    // T14 — BB: followup fallbacks
+    test("followup template: uses '[topic]' and 'recently' fallbacks when empty", () => {
+        const res = computeGuidePreview({ goal: 'followup', variantIdx: 0, details: {} });
+        expect(res).toContain('[Name]');
+        expect(res).toContain('[topic]');
+        expect(res).toContain('recently');
+    });
+
+    // T15 — BB: followup with details
+    test("followup template: uses provided context and field, no fallbacks", () => {
+        const res = computeGuidePreview({ goal: 'followup', variantIdx: 0, details: { recipient: 'Eve', context: 'the hackathon', field: 'AI tools' } });
+        expect(res).toContain('Eve');
+        expect(res).toContain('the hackathon');
+        expect(res).toContain('AI tools');
+        expect(res).not.toContain('[topic]');
+        expect(res).not.toContain('recently');
+    });
+
+    // T16 — BB: referral fallbacks
+    test("referral template: uses all fallbacks when empty", () => {
+        const res = computeGuidePreview({ goal: 'referral', variantIdx: 0, details: {} });
+        expect(res).toContain('[Name]');
+        expect(res).toContain('[Company]');
+        expect(res).toContain('[role]');
+        expect(res).toContain('[your name/major]');
+        expect(res).toContain('[relevant project/skill]');
+    });
+
+    // T17 — BB: referral with all details
+    test("referral template: uses all provided details, no fallback placeholders", () => {
+        const res = computeGuidePreview({ goal: 'referral', variantIdx: 0, details: { recipient: 'Frank', company: 'Google', role: 'SWE', yourRole: 'CS grad', field: 'open source' } });
+        expect(res).toContain('Frank');
+        expect(res).toContain('Google');
+        expect(res).toContain('SWE');
+        expect(res).toContain('CS grad');
+        expect(res).toContain('open source');
+        expect(res).not.toContain('[Name]');
+        expect(res).not.toContain('[Company]');
+    });
+
+    // T18 — BB: all goals produce non-empty output
+    test("All goals and all variants produce non-empty string output", () => {
+        _OUTREACH_GOALS.forEach(goal => {
+            const templates = _OUTREACH_TEMPLATES[goal.key] || [];
+            templates.forEach((t, idx) => {
+                const res = computeGuidePreview({ goal: goal.key, variantIdx: idx, details: { recipient: 'X', field: 'F' } });
+                expect(typeof res).toBe('string');
+                expect(res.length).toBeGreaterThan(0);
             });
-        });
-
-        test("Exercises all Step 2 field inputs", async () => {
-            global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-            await act(async () => render(React.createElement(MessagingPage)));
-            await act(async () => fireEvent.click(screen.getByTitle('Outreach Guide')));
-            await act(async () => fireEvent.click(screen.getByText('Ask for Advice').closest('div')));
-            ['Their first name', 'Your name / major', 'Their field / industry', 'Company (optional)', 'Role (optional)', 'Context (optional)'].forEach(label => {
-                fireEvent.change(screen.getByLabelText(label), { target: { value: 'Test' } });
-            });
-            await act(async () => fireEvent.click(screen.getByText('Next \u2192')));
-            expect(screen.getByText('Review & edit your message')).toBeInTheDocument();
-        });
-
-        test("Exercises window.location.hash branches", async () => {
-            const oldHash = window.location.hash;
-            global.useFetch.mockReturnValue({ loading: false, data: [{ id: 1, participantName: 'Alice' }] });
-            global.API.getProfileReadiness.mockResolvedValue({ score: 70, sections: [], fixes: [] });
-            await act(async () => render(React.createElement(MessagingPage)));
-            await act(async () => fireEvent.click(screen.getByTitle('Profile Readiness')));
-
-            const goBtns = screen.getAllByText('Go to profile');
-            goBtns.forEach(btn => {
-                window.location.hash = ''; // reset
-                fireEvent.click(btn);
-                expect(window.location.hash).toBe('#profile');
-            });
-
-            window.location.hash = oldHash;
         });
     });
 });

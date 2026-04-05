@@ -1,0 +1,23 @@
+{
+    "testRunner": "jest",
+    "mutate": [
+        "js/components/pages/MessagingPage.js",
+        "js/components/pages/FeedPage.js"
+    ],
+    "jest": {
+        "projectType": "custom",
+        "configFile": "package.json"
+    },
+    "reporters": [
+        "clear-text",
+        "html"
+    ],
+    "coverageAnalysis": "perTest",
+    "ignorePatterns": [
+        "coverage",
+        "node_modules",
+        "reports",
+        "tests/tests/coverage-report"
+    ],
+    "disableTypeChecks": false
+}

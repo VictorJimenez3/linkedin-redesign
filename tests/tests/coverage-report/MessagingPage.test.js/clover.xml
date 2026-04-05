@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1775343135016" clover="3.2.0">
-  <project timestamp="1775343135016" name="All files">
+<coverage generated="1775409385374" clover="3.2.0">
+  <project timestamp="1775409385374" name="All files">
     <metrics statements="200" coveredstatements="200" conditionals="304" coveredconditionals="257" methods="80" coveredmethods="80" elements="584" coveredelements="537" complexity="0" loc="200" ncloc="200" packages="1" files="1" classes="1"/>
-    <file name="MessagingPage.js" path="C:\Users\dhyan\OneDrive\Desktop\linkedin-redesign\js\components\pages\MessagingPage.js">
+    <file name="MessagingPage.js" path="C:\Users\dhyan\OneDrive\Desktop\AI - 485\linkedin-redesign\js\components\pages\MessagingPage.js">
       <metrics statements="200" coveredstatements="200" conditionals="304" coveredconditionals="257" methods="80" coveredmethods="80"/>
       <line num="8" count="427" type="stmt"/>
       <line num="10" count="427" type="stmt"/>

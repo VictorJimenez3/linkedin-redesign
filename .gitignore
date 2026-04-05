@@ -13,3 +13,6 @@ venv/
 node_modules/
 # SQLite database (auto-generated on startup)
 backend/nexus.db
+
+
+.stryker-tmp

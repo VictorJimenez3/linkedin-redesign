@@ -42,7 +42,7 @@ const {
     computeGuidePreview,
     _OUTREACH_TEMPLATES,
     _OUTREACH_GOALS
-} = require('../../js/components/pages/MessagingPage.js');
+} = require('../../../js/components/pages/MessagingPage.js');
 
 // =============================================================
 // MESSAGING PAGE COMPONENT TESTS

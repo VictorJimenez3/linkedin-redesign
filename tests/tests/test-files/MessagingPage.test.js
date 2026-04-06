@@ -3,6 +3,18 @@
 // Pure function tests for functions inside MessagingPage.js
 // =============================================================
 
+
+// Suppress act() warnings — expected for async state updates in these tests
+const originalError = console.error;
+beforeAll(() => {
+    console.error = (...args) => {
+        if (args[0]?.includes?.('not wrapped in act')) return;
+        originalError(...args);
+    };
+});
+afterAll(() => {
+    console.error = originalError;
+});
 const React = require('react');
 const { render, screen, cleanup, fireEvent, act } = require('@testing-library/react');
 require('@testing-library/jest-dom');

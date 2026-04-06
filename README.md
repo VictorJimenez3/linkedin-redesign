@@ -190,13 +190,13 @@ Coverage report prints to the terminal. An HTML version is saved to `coverage/lc
 To capture **MessagingPage** test results:
 
 ```bash
-npx jest tests/tests/test-files/MessagingPage.test.js --watchAll=false --silent > tests/tests/test-output/messagingPageOutput.txt 2>&1
+npx jest tests/tests/test-files/MessagingPage.test.js --watchAll=false --verbose > tests/tests/test-output/messagingPageOutput.txt 2>&1
 ```
 
 To capture **FeedPage** test results:
 
 ```bash
-npx jest tests/tests/test-files/FeedPage.test.js --watchAll=false --silent > tests/tests/test-output/feedPageOutput.txt 2>&1
+npx jest tests/tests/test-files/FeedPage.test.js --watchAll=false --verbose > tests/tests/test-output/feedPageOutput.txt 2>&1
 ```
 
 #### Run mutation tests (MessagingPage only)

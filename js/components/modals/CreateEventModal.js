@@ -18,9 +18,13 @@ function CreateEventModal() {
 
   function handleCreate() {
     if (!form.name) { showToast('Event name is required', 'error'); return; }
-    showToast('Event created!');
-    closeModal();
-    navigate('events');
+    API.createEvent({ ...form, type: eventType }).then(() => {
+      showToast('Event created!');
+      closeModal();
+      navigate('events');
+    }).catch(() => {
+      showToast('Failed to create event', 'error');
+    });
   }
 
   return (

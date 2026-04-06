@@ -42,6 +42,8 @@
     // ── Feed ──────────────────────────────────────────────────
     getFeed: () => request('GET', '/feed'),
     createPost: (content) => request('POST', '/feed', { content }),
+    likePost: (id) => request('POST', `/feed/${id}/like`),
+    commentOnPost: (id, text) => request('POST', `/feed/${id}/comments`, { text }),
 
     // ── Jobs ──────────────────────────────────────────────────
     getJobs: () => request('GET', '/jobs'),
@@ -62,6 +64,8 @@
 
     // ── Events ────────────────────────────────────────────────
     getEvents: () => request('GET', '/events'),
+    createEvent: (data) => request('POST', '/events', data),
+    attendEvent: (id) => request('POST', `/events/${id}/attend`),
 
     // ── Groups ────────────────────────────────────────────────
     getGroups: () => request('GET', '/groups'),

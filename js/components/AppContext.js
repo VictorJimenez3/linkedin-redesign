@@ -11,7 +11,9 @@ function AppProvider({ children }) {
   const [appError, setAppError] = React.useState(null);
 
   // ── UI state (mirrors App.state) ──────────────────────────
-  const [likedPosts, setLikedPosts] = React.useState(() => new Set());
+  const [likedPosts, setLikedPosts] = React.useState(() => {
+    try { const s = localStorage.getItem('li-liked-posts'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
+  });
   const [savedJobs, setSavedJobs] = React.useState(() => new Set());
   const [connections, setConnections] = React.useState(() => new Set());
   const [following, setFollowing] = React.useState(() => new Set());
@@ -91,8 +93,10 @@ function AppProvider({ children }) {
       const next = new Set(prev);
       if (next.has(postId)) next.delete(postId);
       else next.add(postId);
+      try { localStorage.setItem('li-liked-posts', JSON.stringify([...next])); } catch {}
       return next;
     });
+    API.likePost(postId).catch(() => {});
   }
 
   function toggleSaveJob(jobId) {

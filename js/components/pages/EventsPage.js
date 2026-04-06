@@ -10,11 +10,9 @@ function EventsPage() {
 
   // Seed from API on first load
   React.useEffect(() => {
-    if (events && events.length > 0) {
-      const att = new Set(events.filter(e => e.isAttending).map(e => e.id));
-      const int_ = new Set(events.filter(e => e.isInterested).map(e => e.id));
-      if (att.size > 0) setAttending(att);
-      if (int_.size > 0) setInterested(int_);
+    if (events) {
+      setAttending(new Set(events.filter(e => e.isAttending).map(e => e.id)));
+      setInterested(new Set(events.filter(e => e.isInterested).map(e => e.id)));
     }
   }, [events]);
 
@@ -115,12 +113,14 @@ function EventsPage() {
                   <button
                     className={attending.has(event.id) ? 'li-btn li-btn--primary li-btn--sm' : 'li-btn li-btn--outline li-btn--sm'}
                     onClick={() => {
+                      const wasAttending = attending.has(event.id);
                       setAttending(prev => {
                         const next = new Set(prev);
                         if (next.has(event.id)) { next.delete(event.id); showToast('Removed from attending'); }
                         else { next.add(event.id); showToast('Marked as attending!'); }
                         return next;
                       });
+                      API.attendEvent(event.id).catch(() => {});
                     }}
                   >
                     {attending.has(event.id) ? '✓ Attending' : 'Attend'}

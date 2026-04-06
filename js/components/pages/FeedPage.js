@@ -381,15 +381,17 @@ function FeedPost({ post, liked, onLike, commentsOpen, onToggleComments, followi
   function postComment() {
     if (!commentDraft.trim()) return;
     const u = currentUser || {};
+    const text = commentDraft.trim();
     setLocalComments(prev => [{
       author: u.name || 'You',
       authorHeadline: u.headline,
-      text: commentDraft.trim(),
+      text,
       timestamp: 'Just now',
       likes: 0,
     }, ...prev]);
     setCommentDraft('');
     showToast('Comment posted!');
+    API.commentOnPost(post.id, text).catch(() => {});
   }
 
   const content = post.content || '';

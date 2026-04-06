@@ -493,4 +493,4 @@ if __name__ == "__main__":
     print("Starting Nexus Backend on http://localhost:5000")
     print("App: http://localhost:5000/")
     print("API: http://localhost:5000/api/")
-    app.run(debug=False, port=5000, threaded=True)
+    app.run(host="0.0.0.0", debug=False, port=5000, threaded=True)

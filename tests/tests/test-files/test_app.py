@@ -109,6 +109,11 @@ def client(monkeypatch):
     monkeypatch.setattr(flask_app.dbl, "get_all_posts", lambda: [MOCK_POST])
     monkeypatch.setattr(flask_app.dbl, "create_post",
                         lambda uid, content: {**MOCK_POST, "content": content})
+    monkeypatch.setattr(flask_app.dbl, "get_post_likes_for_user", lambda uid: set())
+    monkeypatch.setattr(flask_app.dbl, "toggle_post_like",
+                        lambda pid, uid: {"liked": True, "likeCount": 1})
+    monkeypatch.setattr(flask_app.dbl, "add_post_comment",
+                        lambda pid, uid, text: {"author": "Test", "text": text, "timestamp": "Just now", "likes": 0})
 
     # Jobs
     monkeypatch.setattr(flask_app.dbl, "get_all_jobs", lambda: [MOCK_JOB])
@@ -128,6 +133,14 @@ def client(monkeypatch):
     monkeypatch.setattr(flask_app.dbl, "mark_notification_read",
                         lambda nid: {**MOCK_NOTIF, "isRead": True})
     monkeypatch.setattr(flask_app.dbl, "mark_all_notifications_read", lambda: None)
+
+    # Events
+    monkeypatch.setattr(flask_app.dbl, "get_all_events_with_attendance",
+                        lambda uid: [{"id": 1, "name": "Test Event", "isAttending": False}])
+    monkeypatch.setattr(flask_app.dbl, "create_event",
+                        lambda uid, data: {**data, "id": "u1", "source": "user", "isAttending": False})
+    monkeypatch.setattr(flask_app.dbl, "toggle_event_attend",
+                        lambda eid, src, uid: {"attending": True})
 
     # Search
     monkeypatch.setattr(flask_app.dbl, "search",

@@ -4,7 +4,7 @@
    Flask backend must be running on http://localhost:5000
    ============================================================ */
 (function () {
-  const BASE = 'http://localhost:5000/api';
+  const BASE = 'https://linkedin-redesign-z364.onrender.com/api';
 
   function getToken() {
     try { return localStorage.getItem('nx-token') || ''; } catch { return ''; }

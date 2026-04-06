@@ -242,8 +242,8 @@
       transition: border-color 0.15s, background 0.15s;
     }
     .radio-option:hover { border-color: var(--blue); background: var(--blue-light); }
-    .radio-option input[type="radio"] { accent-color: var(--blue); width: 18px; height: 18px; }
-    .radio-option label { cursor: pointer; font-size: 15px; font-weight: 500; }
+    .radio-option input[type="radio"] { accent-color: var(--blue); width: 18px; height: 18px; flex-shrink: 0; }
+    .radio-option { font-size: 15px; font-weight: 500; }
 
     .yes-no-btns { display: flex; gap: 12px; margin-top: 8px; }
     .yes-no-btns button {
@@ -669,12 +669,12 @@
       <div class="step" id="step-7">
         <h2 class="step-heading">What kind of network do you want to build?</h2>
         <p class="step-sub">We'll personalize your experience based on your goals. <em style="color:rgba(0,0,0,0.45);font-style:normal;">(optional)</em></p>
-        <div class="radio-option"><input type="radio" name="network-goal" id="goal-1" value="job"><label for="goal-1">Find a new job</label></div>
-        <div class="radio-option"><input type="radio" name="network-goal" id="goal-2" value="connect"><label for="goal-2">Connect with colleagues &amp; classmates</label></div>
-        <div class="radio-option"><input type="radio" name="network-goal" id="goal-3" value="clients"><label for="goal-3">Find clients or business partners</label></div>
-        <div class="radio-option"><input type="radio" name="network-goal" id="goal-4" value="skills"><label for="goal-4">Build skills &amp; knowledge</label></div>
-        <div class="radio-option"><input type="radio" name="network-goal" id="goal-5" value="hire"><label for="goal-5">Hire talent</label></div>
-        <div class="radio-option"><input type="radio" name="network-goal" id="goal-6" value="other"><label for="goal-6">Something else</label></div>
+        <label class="radio-option" for="goal-1"><input type="radio" name="network-goal" id="goal-1" value="job">Find a new job</label>
+        <label class="radio-option" for="goal-2"><input type="radio" name="network-goal" id="goal-2" value="connect">Connect with colleagues &amp; classmates</label>
+        <label class="radio-option" for="goal-3"><input type="radio" name="network-goal" id="goal-3" value="clients">Find clients or business partners</label>
+        <label class="radio-option" for="goal-4"><input type="radio" name="network-goal" id="goal-4" value="skills">Build skills &amp; knowledge</label>
+        <label class="radio-option" for="goal-5"><input type="radio" name="network-goal" id="goal-5" value="hire">Hire talent</label>
+        <label class="radio-option" for="goal-6"><input type="radio" name="network-goal" id="goal-6" value="other">Something else</label>
         <span class="error-msg" id="s-goal-err" style="margin-top:4px;">Please select an option.</span>
         <div class="step-actions">
           <button class="btn-primary" onclick="nextStep(7)">Continue</button>

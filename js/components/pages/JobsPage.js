@@ -47,7 +47,7 @@ function JobsPage({ selectedJobId }) {
               }}
             />
           </div>
-          <button className="li-btn li-btn--primary li-btn--sm">Search</button>
+          <button className="li-btn li-btn--primary li-btn--sm" onClick={() => setSearchQ(searchQ.trim())}>Search</button>
         </div>
       </div>
 

@@ -8,11 +8,20 @@ function EventsPage() {
   const [attending, setAttending] = React.useState(() => new Set());
   const [interested, setInterested] = React.useState(() => new Set());
 
-  // Seed from API on first load
+  // Seed from API on first load; fall back to localStorage
   React.useEffect(() => {
     if (events) {
-      setAttending(new Set(events.filter(e => e.isAttending).map(e => e.id)));
-      setInterested(new Set(events.filter(e => e.isInterested).map(e => e.id)));
+      const apiAttending = new Set(events.filter(e => e.isAttending).map(e => e.id));
+      const apiInterested = new Set(events.filter(e => e.isInterested).map(e => e.id));
+      // Merge with any locally-stored state (covers events created before backend had attendance)
+      try {
+        const storedA = JSON.parse(localStorage.getItem('li-attending-events') || '[]');
+        storedA.forEach(id => apiAttending.add(id));
+        const storedI = JSON.parse(localStorage.getItem('li-interested-events') || '[]');
+        storedI.forEach(id => apiInterested.add(id));
+      } catch (_) {}
+      setAttending(apiAttending);
+      setInterested(apiInterested);
     }
   }, [events]);
 
@@ -118,6 +127,7 @@ function EventsPage() {
                         const next = new Set(prev);
                         if (next.has(event.id)) { next.delete(event.id); showToast('Removed from attending'); }
                         else { next.add(event.id); showToast('Marked as attending!'); }
+                        try { localStorage.setItem('li-attending-events', JSON.stringify([...next])); } catch (_) {}
                         return next;
                       });
                       API.attendEvent(event.id).catch(() => {});
@@ -130,8 +140,9 @@ function EventsPage() {
                     onClick={() => {
                       setInterested(prev => {
                         const next = new Set(prev);
-                        if (next.has(event.id)) next.delete(event.id);
+                        if (next.has(event.id)) { next.delete(event.id); showToast('Removed from interested'); }
                         else { next.add(event.id); showToast('Marked as interested!'); }
+                        try { localStorage.setItem('li-interested-events', JSON.stringify([...next])); } catch (_) {}
                         return next;
                       });
                     }}

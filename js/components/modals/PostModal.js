@@ -16,9 +16,7 @@ function PostModal() {
         navigate('feed');
       })
       .catch(() => {
-        // Optimistic: still close and show success in demo context
-        showToast('Post published!');
-        closeModal();
+        showToast('Failed to publish post. Try again.', 'error');
       });
   }
 

@@ -17,7 +17,12 @@ function CreateEventModal() {
   }
 
   function handleCreate() {
-    if (!form.name) { showToast('Event name is required', 'error'); return; }
+    if (!form.name.trim()) { showToast('Event name is required', 'error'); return; }
+    if (!form.organizer.trim()) { showToast('Organizer is required', 'error'); return; }
+    if (!form.startDate) { showToast('Start date is required', 'error'); return; }
+    if (!form.startTime) { showToast('Start time is required', 'error'); return; }
+    if (form.endDate && form.startDate && form.endDate < form.startDate) { showToast('End date must be after start date', 'error'); return; }
+    if (form.endDate && form.endDate === form.startDate && form.endTime && form.startTime && form.endTime <= form.startTime) { showToast('End time must be after start time', 'error'); return; }
     API.createEvent({ ...form, type: eventType }).then(() => {
       showToast('Event created!');
       closeModal();

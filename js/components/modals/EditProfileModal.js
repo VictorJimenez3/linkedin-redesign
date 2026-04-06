@@ -18,6 +18,7 @@ function EditProfileModal() {
 
   function handleSave() {
     if (!form.firstName.trim()) { showToast('First name is required', 'error'); return; }
+    if (!form.headline.trim()) { showToast('Headline is required', 'error'); return; }
     const name = (form.firstName + ' ' + form.lastName).trim();
     const updates = { headline: form.headline, location: form.location, pronouns: form.pronouns, industry: form.industry };
     if (name) updates.name = name;

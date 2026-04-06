@@ -14,10 +14,18 @@ function AppProvider({ children }) {
   const [likedPosts, setLikedPosts] = React.useState(() => {
     try { const s = localStorage.getItem('li-liked-posts'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
   });
-  const [savedJobs, setSavedJobs] = React.useState(() => new Set());
-  const [connections, setConnections] = React.useState(() => new Set());
-  const [following, setFollowing] = React.useState(() => new Set());
-  const [pendingConnections, setPendingConnections] = React.useState(() => new Set());
+  const [savedJobs, setSavedJobs] = React.useState(() => {
+    try { const s = localStorage.getItem('li-saved-jobs'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
+  });
+  const [connections, setConnections] = React.useState(() => {
+    try { const s = localStorage.getItem('li-connections'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
+  });
+  const [following, setFollowing] = React.useState(() => {
+    try { const s = localStorage.getItem('li-following'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
+  });
+  const [pendingConnections, setPendingConnections] = React.useState(() => {
+    try { const s = localStorage.getItem('li-pending-conn'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
+  });
 
   const [dismissedInvitations, setDismissedInvitations] = React.useState(() => {
     try { const s = localStorage.getItem('li-dismissed-inv'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
@@ -104,19 +112,29 @@ function AppProvider({ children }) {
       const next = new Set(prev);
       if (next.has(jobId)) next.delete(jobId);
       else next.add(jobId);
+      try { localStorage.setItem('li-saved-jobs', JSON.stringify([...next])); } catch {}
       return next;
     });
   }
 
   function connect(userId) {
-    setPendingConnections(prev => new Set([...prev, String(userId)]));
+    setPendingConnections(prev => {
+      const next = new Set([...prev, String(userId)]);
+      try { localStorage.setItem('li-pending-conn', JSON.stringify([...next])); } catch {}
+      return next;
+    });
   }
 
   function acceptConnection(userId) {
-    setConnections(prev => new Set([...prev, String(userId)]));
+    setConnections(prev => {
+      const next = new Set([...prev, String(userId)]);
+      try { localStorage.setItem('li-connections', JSON.stringify([...next])); } catch {}
+      return next;
+    });
     setPendingConnections(prev => {
       const next = new Set(prev);
       next.delete(String(userId));
+      try { localStorage.setItem('li-pending-conn', JSON.stringify([...next])); } catch {}
       return next;
     });
   }
@@ -138,7 +156,11 @@ function AppProvider({ children }) {
   }
 
   function follow(userId) {
-    setFollowing(prev => new Set([...prev, String(userId)]));
+    setFollowing(prev => {
+      const next = new Set([...prev, String(userId)]);
+      try { localStorage.setItem('li-following', JSON.stringify([...next])); } catch {}
+      return next;
+    });
   }
 
   function joinGroup(groupId) {

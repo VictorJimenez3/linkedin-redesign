@@ -114,10 +114,11 @@ function AppProvider({ children }) {
 
   // ── Actions ───────────────────────────────────────────────
   function toggleLike(postId) {
+    const key = String(postId);
     setLikedPosts(prev => {
       const next = new Set(prev);
-      if (next.has(postId)) next.delete(postId);
-      else next.add(postId);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       try { localStorage.setItem('li-liked-posts', JSON.stringify([...next])); } catch {}
       return next;
     });

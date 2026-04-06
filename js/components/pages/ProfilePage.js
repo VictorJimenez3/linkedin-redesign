@@ -5,8 +5,9 @@
 /* Sub-component: pulls real users from API for "People also viewed" */
 function PeopleAlsoViewed({ currentUserId }) {
   const { data: users } = useFetch(() => API.getUsers(), []);
-  const { showToast } = React.useContext(AppContext);
-  const shown = (users || []).filter(u => String(u.id) !== String(currentUserId)).slice(0, 3);
+  const { showToast, currentUser } = React.useContext(AppContext);
+  const filterId = currentUserId || (currentUser && currentUser.id);
+  const shown = (users || []).filter(u => !filterId || String(u.id) !== String(filterId)).slice(0, 3);
   if (!shown.length) return null;
   return (
     <div className="li-card" style={{ padding: 20 }}>

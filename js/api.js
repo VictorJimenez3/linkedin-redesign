@@ -97,6 +97,8 @@
       request('POST', '/auth/login', { email, password }),
     register: (name, email, password) =>
       request('POST', '/auth/register', { name, email, password }),
+    changePassword: (current, newPassword) =>
+      request('POST', '/auth/change-password', { current, newPassword }),
     deleteUser: (id) =>
       request('DELETE', `/users/${id}`),
   };

@@ -27,7 +27,7 @@ function LearningPage() {
   const shownCourses = (tab === 'explore' && searchQ.trim())
     ? baseShown.filter(c => {
         const q = searchQ.toLowerCase();
-        return c.title?.toLowerCase().includes(q) || c.instructor?.toLowerCase().includes(q) || c.skills?.some(s => s.toLowerCase().includes(q));
+        return c.title?.toLowerCase().includes(q) || c.instructor?.toLowerCase().includes(q) || (Array.isArray(c.skills) && c.skills.some(s => s.toLowerCase().includes(q)));
       })
     : baseShown;
 

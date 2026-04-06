@@ -121,8 +121,8 @@ function MessagingPage() {
   // React version of your old step-by-step guide logic
   // ────────────────────────────────────────────────────────────
   function openOutreachGuide() {
+    if (!selectedId) { showToast('Select a conversation first', 'info'); return; }
     setActivePanel(prev => (prev === 'guide' ? null : 'guide'));
-    if (!selectedId) return;
 
     // Close readiness if open
     if (activePanel === 'score') setActivePanel('guide');

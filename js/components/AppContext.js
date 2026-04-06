@@ -125,10 +125,11 @@ function AppProvider({ children }) {
   }
 
   function toggleSaveJob(jobId) {
+    const key = String(jobId);
     setSavedJobs(prev => {
       const next = new Set(prev);
-      if (next.has(jobId)) next.delete(jobId);
-      else next.add(jobId);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       try { localStorage.setItem('li-saved-jobs', JSON.stringify([...next])); } catch {}
       return next;
     });

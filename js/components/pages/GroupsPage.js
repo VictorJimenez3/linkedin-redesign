@@ -94,7 +94,7 @@ function GroupsPage() {
                 >
                   View
                 </button>
-                {joined.has(group.id) ? (
+                {joined.has(String(group.id)) ? (
                   <button
                     className="li-btn li-btn--ghost li-btn--sm"
                     onClick={() => {

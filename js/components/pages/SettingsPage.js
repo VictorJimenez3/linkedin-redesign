@@ -154,7 +154,7 @@ function SettingsPage() {
                     </div>
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Nexus URL</label>
-                      <input className="li-settings-input" readOnly value={`nexus.io/in/${currentUser ? currentUser.name.toLowerCase().replace(/\s+/g, '') : ''}`} style={{ width: '100%', boxSizing: 'border-box', color: 'var(--text-2)' }} />
+                      <input className="li-settings-input" readOnly value={`nexus.io/in/${currentUser?.name?.toLowerCase().replace(/\s+/g, '') || ''}`} style={{ width: '100%', boxSizing: 'border-box', color: 'var(--text-2)' }} />
                     </div>
                   </div>
                 </div>
@@ -236,8 +236,9 @@ function SettingsPage() {
                         if (!passwordData.newPw) { showToast('New password is required', 'error'); return; }
                         if (passwordData.newPw.length < 8) { showToast('Password must be at least 8 characters', 'error'); return; }
                         if (passwordData.newPw !== passwordData.confirm) { showToast('Passwords do not match', 'error'); return; }
-                        showToast('Password updated successfully!');
-                        setPasswordData({ current: '', newPw: '', confirm: '' });
+                        API.changePassword(passwordData.current, passwordData.newPw)
+                          .then(() => { showToast('Password updated successfully!'); setPasswordData({ current: '', newPw: '', confirm: '' }); })
+                          .catch(err => showToast(err.message || 'Failed to update password', 'error'));
                       }}>
                       Update password
                     </button>

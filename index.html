@@ -941,41 +941,40 @@
         return ok;
       }
       case 4: {
-        let ok = true;
-        if (!document.getElementById('s-country').value) { fieldErr('s-country'); ok = false; } else fieldOk('s-country');
-        if (!document.getElementById('s-postal').value.trim()) { fieldErr('s-postal'); ok = false; } else fieldOk('s-postal');
-        return ok;
+        // Optional step — only validate if partially filled
+        const country = document.getElementById('s-country').value;
+        const postal = document.getElementById('s-postal').value.trim();
+        if (country && !postal) { fieldErr('s-postal'); return false; }
+        if (postal && !country) { fieldErr('s-country'); return false; }
+        fieldOk('s-country'); fieldOk('s-postal'); return true;
       }
       case 5: {
-        let ok = true;
-        ['s-title', 's-emptype', 's-company'].forEach(f => {
-          if (!document.getElementById(f).value.trim()) { fieldErr(f); ok = false; } else fieldOk(f);
-        });
-        return ok;
+        // Optional step — only validate if title/company partially filled
+        const title = document.getElementById('s-title').value.trim();
+        const company = document.getElementById('s-company').value.trim();
+        if (title && !company) { fieldErr('s-company'); return false; }
+        if (company && !title) { fieldErr('s-title'); return false; }
+        fieldOk('s-title'); fieldOk('s-emptype'); fieldOk('s-company'); return true;
       }
       case 6: {
-        const sel = document.querySelectorAll('#industry-grid input:checked');
-        const err = document.getElementById('s-industry-err');
-        if (sel.length === 0) { err.style.display = 'block'; return false; }
-        err.style.display = 'none'; return true;
+        // Optional step — allow proceeding with no industry selected
+        document.getElementById('s-industry-err').style.display = 'none'; return true;
       }
       case 7: {
-        const sel = document.querySelector('input[name="network-goal"]:checked');
-        const err = document.getElementById('s-goal-err');
-        if (!sel) { err.style.display = 'block'; return false; }
-        err.style.display = 'none'; return true;
+        // Optional step — allow proceeding with no goal selected
+        document.getElementById('s-goal-err').style.display = 'none'; return true;
       }
       case 8: {
-        const err = document.getElementById('s-student-err');
-        if (!studentChoice) { err.style.display = 'block'; return false; }
-        err.style.display = 'none'; return true;
+        // Optional step — allow proceeding with no student choice
+        document.getElementById('s-student-err').style.display = 'none'; return true;
       }
       case 9: {
+        // Optional step — only validate if birthday is partially filled
         const m = document.getElementById('s-bday-month').value;
         const d = document.getElementById('s-bday-day').value;
         const y = document.getElementById('s-bday-year').value;
         const err = document.getElementById('s-bday-err');
-        if (!m || !d || !y) { err.style.display = 'block'; return false; }
+        if ((m || d || y) && (!m || !d || !y)) { err.style.display = 'block'; return false; }
         err.style.display = 'none'; return true;
       }
     }

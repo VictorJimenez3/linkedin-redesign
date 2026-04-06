@@ -34,7 +34,7 @@ function AppProvider({ children }) {
     try { const s = localStorage.getItem('li-applied-jobs'); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
   });
   const [joinedGroups, setJoinedGroups] = React.useState(() => {
-    try { const s = localStorage.getItem('li-joined-groups'); return s ? new Set(JSON.parse(s)) : new Set([1, 2, 4]); } catch { return new Set([1, 2, 4]); }
+    try { const s = localStorage.getItem('li-joined-groups'); return s ? new Set(JSON.parse(s)) : new Set(['1', '2', '4']); } catch { return new Set(['1', '2', '4']); }
   });
   const [unreadMessages, setUnreadMessages] = React.useState(0);
   const [unreadNotifications, setUnreadNotifications] = React.useState(0);
@@ -174,7 +174,10 @@ function AppProvider({ children }) {
 
   function follow(userId) {
     setFollowing(prev => {
-      const next = new Set([...prev, String(userId)]);
+      const next = new Set(prev);
+      const key = String(userId);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       try { localStorage.setItem('li-following', JSON.stringify([...next])); } catch {}
       return next;
     });
@@ -182,7 +185,7 @@ function AppProvider({ children }) {
 
   function joinGroup(groupId) {
     setJoinedGroups(prev => {
-      const next = new Set([...prev, groupId]);
+      const next = new Set([...prev, String(groupId)]);
       try { localStorage.setItem('li-joined-groups', JSON.stringify([...next])); } catch {}
       return next;
     });
@@ -191,7 +194,7 @@ function AppProvider({ children }) {
   function leaveGroup(groupId) {
     setJoinedGroups(prev => {
       const next = new Set(prev);
-      next.delete(groupId);
+      next.delete(String(groupId));
       try { localStorage.setItem('li-joined-groups', JSON.stringify([...next])); } catch {}
       return next;
     });

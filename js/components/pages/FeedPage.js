@@ -137,7 +137,10 @@ function FeedPage() {
               openModal={openModal}
               showToast={showToast}
               currentUser={u}
-              onDelete={id => setLocalPosts(prev => prev.filter(p => p.id !== id))}
+              onDelete={id => {
+                setLocalPosts(prev => prev.filter(p => p.id !== id));
+                API.deletePost(id).catch(() => {});
+              }}
             />
             {/* Sponsored posts interspersed */}
             {(i === 1 || i === 3) && (

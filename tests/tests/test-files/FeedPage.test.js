@@ -27,6 +27,7 @@ global.API = {
   createPost: mockCreatePost,
   likePost: jest.fn(() => Promise.resolve({ liked: true, likeCount: 1 })),
   commentOnPost: jest.fn(() => Promise.resolve({ author: 'Test', text: 'hi', timestamp: 'Just now', likes: 0 })),
+  deletePost: jest.fn(() => Promise.resolve({ deleted: true })),
 };
 global.useFetch = jest.fn();
 global.LoadingSpinner = ({ text }) => React.createElement('div', { 'data-testid': 'spinner' }, text);

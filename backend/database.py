@@ -743,6 +743,19 @@ def add_post_comment(post_id: int, author_id: int, text: str):
     return comment
 
 
+def delete_post(post_id: int, user_id: int):
+    """Delete a post if it belongs to user_id. Returns True if deleted."""
+    conn = _connect()
+    row = conn.execute("SELECT author_id FROM posts WHERE id=?", (int(post_id),)).fetchone()
+    if not row or row["author_id"] != int(user_id):
+        conn.close()
+        return False
+    conn.execute("DELETE FROM posts WHERE id=?", (int(post_id),))
+    conn.commit()
+    conn.close()
+    return True
+
+
 def get_post_likes_for_user(user_id: int):
     """Return set of post IDs liked by user."""
     conn = _connect()

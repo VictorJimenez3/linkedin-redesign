@@ -90,14 +90,14 @@ function SettingsPage() {
                 <Toggle
                   label="Job alerts"
                   desc="Get notified about new job matches"
-                  value={true}
-                  onChange={() => showToast('Job alerts updated')}
+                  value={settings.jobAlerts !== false}
+                  onChange={v => { setSettings(s => ({ ...s, jobAlerts: v })); showToast('Job alerts ' + (v ? 'enabled' : 'disabled')); }}
                 />
                 <Toggle
                   label="Network updates"
                   desc="New connections and birthday reminders"
-                  value={true}
-                  onChange={() => showToast('Network updates updated')}
+                  value={settings.networkUpdates !== false}
+                  onChange={v => { setSettings(s => ({ ...s, networkUpdates: v })); showToast('Network updates ' + (v ? 'enabled' : 'disabled')); }}
                 />
               </div>
             )}
@@ -126,8 +126,8 @@ function SettingsPage() {
                 <Toggle
                   label="Profile views"
                   desc="Show when you've viewed someone's profile"
-                  value={true}
-                  onChange={() => showToast('Profile view setting updated')}
+                  value={settings.profileViews !== false}
+                  onChange={v => { setSettings(s => ({ ...s, profileViews: v })); showToast('Profile view setting updated'); }}
                 />
               </div>
             )}
@@ -233,14 +233,14 @@ function SettingsPage() {
                 <Toggle
                   label="Allow personalized ads"
                   desc="Nexus uses your data to show relevant content"
-                  value={false}
-                  onChange={() => showToast('Ad preference updated')}
+                  value={settings.personalizedAds === true}
+                  onChange={v => { setSettings(s => ({ ...s, personalizedAds: v })); showToast('Ad preference updated'); }}
                 />
                 <Toggle
                   label="Share data with third parties"
                   desc="Allow Nexus partners to use your data"
-                  value={false}
-                  onChange={() => showToast('Data sharing preference updated')}
+                  value={settings.shareData === true}
+                  onChange={v => { setSettings(s => ({ ...s, shareData: v })); showToast('Data sharing preference updated'); }}
                 />
                 <div style={{ marginTop: 24, padding: 16, background: 'var(--bg-2)', borderRadius: 8 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Download your data</h3>

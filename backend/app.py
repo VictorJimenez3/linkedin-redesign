@@ -227,6 +227,16 @@ def create_post():
     return jsonify(post), 201
 
 
+@app.route("/api/feed/<int:post_id>", methods=["DELETE"])
+def delete_post(post_id):
+    """DELETE /api/feed/:id — delete a post (owner only)."""
+    current_user = _auth_user()
+    deleted = dbl.delete_post(post_id, current_user["id"])
+    if not deleted:
+        abort(404, description=f"Post {post_id} not found or not yours")
+    return jsonify({"deleted": True})
+
+
 @app.route("/api/feed/<int:post_id>/like", methods=["POST"])
 def toggle_post_like(post_id):
     """POST /api/feed/:id/like — toggle like on a post."""

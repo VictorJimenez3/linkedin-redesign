@@ -43,13 +43,25 @@ function AppProvider({ children }) {
     () => localStorage.getItem('li-dark-mode') === '1'
   );
 
-  const [settings, setSettings] = React.useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    publicProfile: true,
-    showConnections: true,
-    openToWork: false,
-    twoFactor: false,
+  const [settings, setSettings] = React.useState(() => {
+    try {
+      const s = localStorage.getItem('li-settings');
+      return s ? JSON.parse(s) : {
+        emailNotifications: true, pushNotifications: true,
+        publicProfile: true, showConnections: true,
+        openToWork: false, twoFactor: false,
+        jobAlerts: true, networkUpdates: true,
+        profileViews: true, personalizedAds: false, shareData: false,
+      };
+    } catch {
+      return {
+        emailNotifications: true, pushNotifications: true,
+        publicProfile: true, showConnections: true,
+        openToWork: false, twoFactor: false,
+        jobAlerts: true, networkUpdates: true,
+        profileViews: true, personalizedAds: false, shareData: false,
+      };
+    }
   });
 
   // ── Modal state ───────────────────────────────────────────
@@ -94,6 +106,11 @@ function AppProvider({ children }) {
     document.body.classList.toggle('dark-mode', darkMode);
     localStorage.setItem('li-dark-mode', darkMode ? '1' : '0');
   }, [darkMode]);
+
+  // ── Settings persistence ──────────────────────────────────
+  React.useEffect(() => {
+    try { localStorage.setItem('li-settings', JSON.stringify(settings)); } catch {}
+  }, [settings]);
 
   // ── Actions ───────────────────────────────────────────────
   function toggleLike(postId) {

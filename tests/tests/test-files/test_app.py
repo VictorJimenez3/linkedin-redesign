@@ -114,6 +114,7 @@ def client(monkeypatch):
                         lambda pid, uid: {"liked": True, "likeCount": 1})
     monkeypatch.setattr(flask_app.dbl, "add_post_comment",
                         lambda pid, uid, text: {"author": "Test", "text": text, "timestamp": "Just now", "likes": 0})
+    monkeypatch.setattr(flask_app.dbl, "delete_post", lambda pid, uid: True)
 
     # Jobs
     monkeypatch.setattr(flask_app.dbl, "get_all_jobs", lambda: [MOCK_JOB])
@@ -396,6 +397,29 @@ class TestFeed:
 
     def test_T81_RG_create_post_missing_body_returns_400(self, client):
         resp = client.post("/api/feed", content_type="application/json")
+        assert resp.status_code == 400
+
+    def test_T85_BB_delete_post_returns_200(self, client):
+        resp = client.delete("/api/feed/1")
+        assert resp.status_code == 200
+        assert _json(resp)["deleted"] is True
+
+    def test_T86_BB_delete_post_not_found_returns_404(self, client, monkeypatch):
+        monkeypatch.setattr(flask_app.dbl, "delete_post", lambda pid, uid: False)
+        resp = client.delete("/api/feed/9999")
+        assert resp.status_code == 404
+
+    def test_T87_BB_like_post_returns_liked(self, client):
+        resp = client.post("/api/feed/1/like")
+        assert resp.status_code == 200
+        assert "liked" in _json(resp)
+
+    def test_T88_BB_comment_on_post_returns_201(self, client):
+        resp = _post(client, "/api/feed/1/comments", {"text": "Nice!"})
+        assert resp.status_code == 201
+
+    def test_T89_WB_comment_empty_text_returns_400(self, client):
+        resp = _post(client, "/api/feed/1/comments", {"text": ""})
         assert resp.status_code == 400
 
 

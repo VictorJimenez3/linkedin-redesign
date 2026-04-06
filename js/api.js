@@ -44,6 +44,7 @@
     createPost: (content) => request('POST', '/feed', { content }),
     likePost: (id) => request('POST', `/feed/${id}/like`),
     commentOnPost: (id, text) => request('POST', `/feed/${id}/comments`, { text }),
+    deletePost: (id) => request('DELETE', `/feed/${id}`),
 
     // ── Jobs ──────────────────────────────────────────────────
     getJobs: () => request('GET', '/jobs'),

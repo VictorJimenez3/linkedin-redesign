@@ -40,13 +40,12 @@ dbl.init_db()
 def _auth_user():
     """
     Extract and validate the session token from the Authorization header.
-    Returns the user dict, or user id=1 as fallback for unauthenticated requests
-    (preserves backward compatibility when the app is opened without logging in).
+    Returns the user dict on success, or None if unauthenticated/invalid token.
     """
     auth = request.headers.get("Authorization", "")
     token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
     uid = dbl.get_session_user_id(token) if token else None
-    return dbl.get_current_user(uid if uid else 1)
+    return dbl.get_current_user(uid) if uid else None
 
 
 # ── Serve SPA ─────────────────────────────────────────────────
@@ -142,7 +141,7 @@ def get_me():
     """GET /api/me — current logged-in user profile."""
     user = _auth_user()
     if not user:
-        abort(404, description="Current user not found")
+        abort(401, description="Authentication required")
     return jsonify(user)
 
 
@@ -221,7 +220,7 @@ def create_post():
 
     current_user = _auth_user()
     if not current_user:
-        abort(500, description="Current user not found")
+        abort(401, description="Authentication required")
 
     post = dbl.create_post(current_user["id"], content)
     return jsonify(post), 201
@@ -295,18 +294,42 @@ def get_company(company_id):
 # Conversation Endpoints
 # ══════════════════════════════════════════════════════════════
 
+@app.route("/api/conversations", methods=["POST"])
+def create_conversation():
+    """POST /api/conversations — start a new conversation with another user."""
+    user = _auth_user()
+    if not user:
+        abort(401, description="Authentication required")
+    body = request.get_json(silent=True) or {}
+    participant_id = body.get("participantId")
+    if not participant_id:
+        abort(400, description="participantId is required")
+    participant = dbl.get_user_by_id(int(participant_id))
+    if not participant:
+        abort(404, description="Participant not found")
+    conv = dbl.create_conversation(user["id"], participant)
+    return jsonify(conv), 201
+
+
 @app.route("/api/conversations")
 def get_conversations_list():
-    """GET /api/conversations — all message threads (summaries)."""
-    return jsonify(dbl.get_all_conversations())
+    """GET /api/conversations — message threads for the current user."""
+    user = _auth_user()
+    uid = user["id"] if user else 1
+    return jsonify(dbl.get_conversations_for_user(uid))
 
 
 @app.route("/api/conversations/<int:conv_id>")
 def get_conversation(conv_id):
     """GET /api/conversations/:id — single conversation with full messages."""
+    user = _auth_user()
+    uid = user["id"] if user else 1
     conv = dbl.get_conversation_by_id(conv_id)
     if not conv:
         abort(404, description=f"Conversation {conv_id} not found")
+    participant_id = int(conv.get("participantId") or conv.get("participant", {}).get("id", 0) or 0)
+    if int(conv.get("ownerId", 1)) != uid and participant_id != uid:
+        abort(403, description="Access denied")
     return jsonify(conv)
 
 
@@ -325,7 +348,7 @@ def post_message(conv_id):
 
     current_user = _auth_user()
     if not current_user:
-        abort(500, description="Current user not found")
+        abort(401, description="Authentication required")
     msg = dbl.send_message(conv_id, sender_id=current_user["id"], text=text)
     msg["isMe"] = True
     return jsonify(msg), 201
@@ -412,7 +435,12 @@ def get_news():
 
 @app.route("/api/invitations")
 def get_invitations():
-    return jsonify(static_data.INVITATIONS)
+    """Return pending invitations for the current user.
+    Falls back to hardcoded seed data only for the demo account (id=1)."""
+    user = _auth_user()
+    if user and user.get("id") == 1:
+        return jsonify(static_data.INVITATIONS)
+    return jsonify([])
 
 
 @app.route("/api/hashtags")
@@ -442,6 +470,8 @@ def search():
 def get_profile_readiness():
     """GET /api/profile-readiness — compute profile completeness score."""
     u = _auth_user()
+    if not u:
+        abort(401, description="Authentication required")
 
     headline_len = len((u.get("headline") or "").strip())
     about_len    = len((u.get("about") or "").strip())
@@ -513,6 +543,8 @@ def outreach_generate():
     context = {"tone": tone, "goal": goal, "custom_note": custom_note, "details": details}
 
     current_user = _auth_user()
+    if not current_user:
+        abort(401, description="Authentication required")
     result = outreach_mod.generate_outreach_message(
         current_user,
         recipient,
@@ -543,6 +575,8 @@ def outreach_readiness():
             abort(404, description=f"User {user_id} not found")
     else:
         user = _auth_user()
+        if not user:
+            abort(401, description="Authentication required")
 
     return jsonify(outreach_mod.compute_outreach_readiness(user)), 200
 

@@ -316,6 +316,43 @@ def update_current_user(updates: dict, user_id: int = 1):
     return data
 
 
+def add_education(user_id: int, entry: dict):
+    """Append an education entry to a user's data. Returns updated user dict."""
+    conn = _connect()
+    row = conn.execute("SELECT data FROM users WHERE id=?", (user_id,)).fetchone()
+    if not row:
+        conn.close()
+        return None
+    data = json.loads(row["data"])
+    edu_list = data.get("education", [])
+    entry["id"] = max((e.get("id", 0) for e in edu_list), default=0) + 1
+    edu_list.append(entry)
+    data["education"] = edu_list
+    conn.execute("UPDATE users SET data=? WHERE id=?", (json.dumps(data), user_id))
+    conn.commit()
+    conn.close()
+    return data
+
+
+def add_skill(user_id: int, skill: str):
+    """Append a skill string to a user's skills list (no duplicates). Returns updated user dict."""
+    conn = _connect()
+    row = conn.execute("SELECT data FROM users WHERE id=?", (user_id,)).fetchone()
+    if not row:
+        conn.close()
+        return None
+    data = json.loads(row["data"])
+    skills = data.get("skills", [])
+    skill_names = [s if isinstance(s, str) else s.get("name", "") for s in skills]
+    if skill not in skill_names:
+        skills.append(skill)
+    data["skills"] = skills
+    conn.execute("UPDATE users SET data=? WHERE id=?", (json.dumps(data), user_id))
+    conn.commit()
+    conn.close()
+    return data
+
+
 def get_all_users(exclude_id: int = 1):
     conn = _connect()
     rows = conn.execute("SELECT data FROM users WHERE id != ?", (exclude_id,)).fetchall()

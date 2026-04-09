@@ -162,6 +162,73 @@ def update_me():
     return jsonify(updated)
 
 
+@app.route("/api/me/education", methods=["POST"])
+def add_education():
+    """POST /api/me/education — append an education entry to the current user."""
+    user = _auth_user()
+    if not user:
+        abort(401, description="Authentication required")
+    body = request.get_json(silent=True) or {}
+    school = (body.get("school") or "").strip()
+    if not school:
+        abort(400, description="school is required")
+    entry = {
+        "school": school,
+        "degree": (body.get("degree") or "").strip(),
+        "field": (body.get("field") or "").strip(),
+        "startDate": (body.get("startDate") or "").strip(),
+        "endDate": (body.get("endDate") or "").strip(),
+    }
+    updated = dbl.add_education(user["id"], entry)
+    if not updated:
+        abort(404, description="User not found")
+    return jsonify(updated)
+
+
+@app.route("/api/me/skills", methods=["POST"])
+def add_skill():
+    """POST /api/me/skills — append a skill to the current user."""
+    user = _auth_user()
+    if not user:
+        abort(401, description="Authentication required")
+    body = request.get_json(silent=True) or {}
+    skill = (body.get("skill") or "").strip()
+    if not skill:
+        abort(400, description="skill is required")
+    updated = dbl.add_skill(user["id"], skill)
+    if not updated:
+        abort(404, description="User not found")
+    return jsonify(updated)
+
+
+@app.route("/api/groups", methods=["POST"])
+def create_group():
+    """POST /api/groups — create a new group (persisted in memory for the session)."""
+    user = _auth_user()
+    if not user:
+        abort(401, description="Authentication required")
+    body = request.get_json(silent=True) or {}
+    name = (body.get("name") or "").strip()
+    if not name:
+        abort(400, description="name is required")
+    new_id = max((g["id"] for g in static_data.GROUPS), default=0) + 1
+    new_group = {
+        "id": new_id,
+        "name": name,
+        "privacy": body.get("privacy", "Public"),
+        "members": 1,
+        "posts": 0,
+        "description": (body.get("description") or "").strip(),
+        "coverGradient": "linear-gradient(135deg, #0F5DBD 0%, #0A4A9E 100%)",
+        "isJoined": True,
+        "category": (body.get("category") or "Technology").strip(),
+        "unread": 0,
+        "logo": "",
+    }
+    static_data.GROUPS.append(new_group)
+    return jsonify(new_group), 201
+
+
 @app.route("/api/users")
 def get_users():
     """GET /api/users — all users in the network (excludes current user)."""

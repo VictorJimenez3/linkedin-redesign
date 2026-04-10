@@ -1039,3 +1039,78 @@ class TestDeletePost:
         seed_user(isolated_db, uid=1, email="a@a.com")
         result = database.delete_post(9999, 1)
         assert result is False
+
+
+# ===========================================================================
+# add_education
+# ===========================================================================
+
+class TestAddEducation:
+    def test_T107_BB_adds_education_entry(self, isolated_db):
+        """BB: add_education appends an entry and returns updated user."""
+        seed_user(isolated_db, uid=1, email="a@a.com")
+        entry = {"school": "MIT", "degree": "BS", "field": "CS", "startDate": "2018", "endDate": "2022"}
+        result = database.add_education(1, entry)
+        assert result is not None
+        assert len(result["education"]) == 1
+        assert result["education"][0]["school"] == "MIT"
+
+    def test_T108_WB_entry_gets_auto_id(self, isolated_db):
+        """WB: Each added entry receives an auto-incremented id."""
+        seed_user(isolated_db, uid=1, email="a@a.com")
+        database.add_education(1, {"school": "MIT", "degree": "", "field": "", "startDate": "", "endDate": ""})
+        result = database.add_education(1, {"school": "Stanford", "degree": "", "field": "", "startDate": "", "endDate": ""})
+        ids = [e["id"] for e in result["education"]]
+        assert ids == [1, 2]
+
+    def test_T109_EC_unknown_user_returns_none(self, isolated_db):
+        """EC: Returns None for a user_id that does not exist."""
+        result = database.add_education(9999, {"school": "X", "degree": "", "field": "", "startDate": "", "endDate": ""})
+        assert result is None
+
+    def test_T110_BB_persisted_to_db(self, isolated_db):
+        """BB: Education entry is persisted so a fresh read confirms it."""
+        seed_user(isolated_db, uid=1, email="a@a.com")
+        database.add_education(1, {"school": "Harvard", "degree": "MBA", "field": "Business", "startDate": "2020", "endDate": "2022"})
+        user = database.get_user_by_id(1)
+        assert any(e["school"] == "Harvard" for e in user["education"])
+
+
+# ===========================================================================
+# add_skill
+# ===========================================================================
+
+class TestAddSkill:
+    def test_T111_BB_adds_new_skill(self, isolated_db):
+        """BB: add_skill appends a skill and returns updated user."""
+        seed_user(isolated_db, uid=1, email="a@a.com")
+        result = database.add_skill(1, "Python")
+        assert result is not None
+        assert "Python" in result["skills"]
+
+    def test_T112_WB_no_duplicate_skill(self, isolated_db):
+        """WB: Adding the same skill twice does not create a duplicate."""
+        seed_user(isolated_db, uid=1, email="a@a.com")
+        database.add_skill(1, "Python")
+        result = database.add_skill(1, "Python")
+        assert result["skills"].count("Python") == 1
+
+    def test_T113_EC_unknown_user_returns_none(self, isolated_db):
+        """EC: Returns None for a user_id that does not exist."""
+        result = database.add_skill(9999, "Python")
+        assert result is None
+
+    def test_T114_BB_multiple_skills_all_stored(self, isolated_db):
+        """BB: Adding multiple distinct skills stores all of them."""
+        seed_user(isolated_db, uid=1, email="a@a.com")
+        database.add_skill(1, "React")
+        database.add_skill(1, "TypeScript")
+        result = database.add_skill(1, "Go")
+        assert set(result["skills"]) == {"React", "TypeScript", "Go"}
+
+    def test_T115_WB_persisted_to_db(self, isolated_db):
+        """WB: Skill is persisted so a fresh read confirms it."""
+        seed_user(isolated_db, uid=1, email="a@a.com")
+        database.add_skill(1, "Rust")
+        user = database.get_user_by_id(1)
+        assert "Rust" in user["skills"]

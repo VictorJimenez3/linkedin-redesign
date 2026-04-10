@@ -56,6 +56,7 @@
     // ── Conversations ─────────────────────────────────────────
     getConversations: () => request('GET', '/conversations'),
     getConversation: (id) => request('GET', `/conversations/${id}`),
+    createConversation: (participantId) => request('POST', '/conversations', { participantId }),
     sendMessage: (id, text) => request('POST', `/conversations/${id}/messages`, { text }),
 
     // ── Notifications ─────────────────────────────────────────
@@ -82,6 +83,11 @@
 
     // ── Search ────────────────────────────────────────────────
     search: (q) => request('GET', `/search?q=${encodeURIComponent(q)}`),
+
+    // ── Profile (education / skills) ──────────────────────────
+    addEducation: (entry) => request('POST', '/me/education', entry),
+    addSkill: (skill) => request('POST', '/me/skills', { skill }),
+    createGroup: (data) => request('POST', '/groups', data),
 
     // ── Profile Readiness ─────────────────────────────────────
     getProfileReadiness: () => request('GET', '/profile-readiness'),

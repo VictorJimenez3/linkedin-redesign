@@ -5,6 +5,7 @@ function CompanyPage({ companyId }) {
   const { following, follow, showToast } = React.useContext(AppContext);
   const { data: company, loading, error } = useFetch(() => API.getCompany(companyId), [companyId]);
   const { data: jobs } = useFetch(API.getJobs, []);
+  const { data: allUsers } = useFetch(API.getUsers, []);
   const [tab, setTab] = React.useState('home');
 
   if (loading) return <LoadingSpinner text="Loading company..." />;
@@ -13,6 +14,10 @@ function CompanyPage({ companyId }) {
 
   const isFollowing = following.has(String(companyId));
   const companyJobs = (jobs || []).filter(j => j.company === company.name || j.companyId === company.id).slice(0, 5);
+  const employees = (allUsers || []).filter(u => {
+    const currentExp = (u.experience || []).find(e => e.current);
+    return currentExp && currentExp.company === company.name;
+  });
 
   return (
     <div className="li-page-inner" style={{ maxWidth: 900 }}>
@@ -175,9 +180,26 @@ function CompanyPage({ companyId }) {
       )}
 
       {tab === 'people' && (
-        <div className="li-card" style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>People</div>
-          <p style={{ color: 'var(--text-2)', fontSize: 14 }}>Employee directory coming soon.</p>
+        <div className="li-card" style={{ padding: 24 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
+            {employees.length} employee{employees.length !== 1 ? 's' : ''} at {company.name}
+          </h2>
+          {employees.length === 0 ? (
+            <p style={{ color: 'var(--text-2)', fontSize: 14 }}>No employees found in the network.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {employees.map(emp => (
+                <div key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                  <Avatar name={emp.name} size={44} colorOverride={emp.avatarColor} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{emp.name}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{emp.headline}</div>
+                    {emp.location && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{emp.location}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

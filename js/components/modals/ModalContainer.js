@@ -14,6 +14,9 @@ function ModalContainer() {
     'apply':         <ApplyModal />,
     'edit-profile':  <EditProfileModal />,
     'add-exp':       <AddExpModal />,
+    'add-education': <AddEducationModal />,
+    'add-skill':     <AddSkillModal />,
+    'create-group':  <CreateGroupModal />,
     'report':        <ReportModal />,
     'create-event':  <CreateEventModal />,
   };

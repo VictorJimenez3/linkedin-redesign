@@ -168,7 +168,7 @@ function ProfilePage({ userId }) {
             <div className="li-card" style={{ padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700 }}>About</h2>
-                {isOwnProfile && <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => showToast('Edit about — coming soon')}>Edit</button>}
+                {isOwnProfile && <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => openModal('edit-profile')}>Edit</button>}
               </div>
               <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6 }}>
                 {expandedSections.has('about') || user.about.length <= 300
@@ -242,7 +242,7 @@ function ProfilePage({ userId }) {
             <div className="li-card" style={{ padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700 }}>Education</h2>
-                {isOwnProfile && <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => showToast('Add education — coming soon')}>+ Add</button>}
+                {isOwnProfile && <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => openModal('add-education')}>+ Add</button>}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {user.education.map((edu, i) => (
@@ -272,7 +272,7 @@ function ProfilePage({ userId }) {
             <div className="li-card" style={{ padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700 }}>Skills</h2>
-                {isOwnProfile && <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => showToast('Add skill — coming soon')}>+ Add</button>}
+                {isOwnProfile && <button className="li-btn li-btn--ghost li-btn--sm" onClick={() => openModal('add-skill')}>+ Add</button>}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {(expandedSections.has('skills') ? user.skills : user.skills.slice(0, 10)).map((skill, i) => {

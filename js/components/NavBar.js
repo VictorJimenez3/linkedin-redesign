@@ -2,7 +2,7 @@
    NAVBAR.JS — Top navigation bar (replaces static HTML nav)
    ============================================================ */
 function NavBar() {
-  const { currentUser, unreadMessages, openModal, showToast, darkMode, setDarkMode } =
+  const { currentUser, unreadMessages, pendingInvitations, openModal, showToast, darkMode, setDarkMode } =
     React.useContext(AppContext);
   const currentHash = useHash();
 
@@ -98,7 +98,7 @@ function NavBar() {
 
   const navItems = [
     { id: 'feed',          label: 'Home',          badge: 0,                         icon: <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/> },
-    { id: 'network',       label: 'My Network',    badge: 3,                         icon: <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/> },
+    { id: 'network',       label: 'My Network',    badge: pendingInvitations.length,  icon: <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/> },
     { id: 'jobs',          label: 'Jobs',          badge: 0,                         icon: <path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.51 15.49 0 12.36 0c-1.4 0-2.72.56-3.71 1.56L12 4.91l3.35-3.35C15.69 2.65 16 3.32 16 4.07c0 .9-.66 1.65-1.5 1.8L14.18 6H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/> },
     { id: 'messaging',     label: 'Messaging',     badge: unreadMessages,            icon: <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/> },
   ];
@@ -214,6 +214,27 @@ function NavBar() {
 
           <div className="li-nav__divider" />
 
+          {/* Dark mode toggle */}
+          <button
+            type="button"
+            className="li-nav__dark-toggle"
+            onClick={() => setDarkMode(v => !v)}
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {darkMode ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 000-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06a.996.996 0 000 1.41c.39.39 1.03.39 1.41 0l1.06-1.06a.996.996 0 000-1.41-.996.996 0 00-1.41 0zM7.05 18.36l-1.06 1.06a.996.996 0 000 1.41c.39.39 1.03.39 1.41 0l1.06-1.06a.996.996 0 000-1.41-.996.996 0 00-1.41 0z"/>
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 3a9 9 0 100 18A9 9 0 0012 3zm0 16a7 7 0 010-14 7.07 7.07 0 011 .07A5.5 5.5 0 0012 17.5a5.5 5.5 0 004.93-7.93c.36.12.72.27 1.07.43A7 7 0 0112 19z"/>
+              </svg>
+            )}
+          </button>
+
+          <div className="li-nav__divider" />
+
           {/* Me dropdown */}
           <div className="li-nav__item li-nav__me" id="nav-me-wrap">
             <button
@@ -274,17 +295,6 @@ function NavBar() {
                   </button>
 
 
-                  <button
-                    type="button"
-                    className="li-dropdown__item"
-                    role="menuitem"
-                    onClick={() => { setDarkMode(v => !v); setMeOpen(false); }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
-                      <path d="M20 15.31L23.31 12 20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
-                    </svg>
-                    <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-                  </button>
                 </div>
 
                 <div className="li-dropdown__divider" />

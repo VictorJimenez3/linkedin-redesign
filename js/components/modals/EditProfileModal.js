@@ -11,6 +11,7 @@ function EditProfileModal() {
     headline: currentUser ? (currentUser.headline || '') : '',
     industry: currentUser ? (currentUser.industry || 'Technology') : 'Technology',
     location: currentUser ? (currentUser.location || '') : '',
+    about: currentUser ? (currentUser.about || '') : '',
   });
 
   function update(key, val) {
@@ -25,7 +26,7 @@ function EditProfileModal() {
     if (saving) return;
     setSaving(true);
     const name = (form.firstName + ' ' + form.lastName).trim();
-    const updates = { headline: form.headline, location: form.location, pronouns: form.pronouns, industry: form.industry };
+    const updates = { headline: form.headline, location: form.location, pronouns: form.pronouns, industry: form.industry, about: form.about };
     if (name) updates.name = name;
     API.updateMe(updates)
       .then(updated => {
@@ -83,6 +84,11 @@ function EditProfileModal() {
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Location *</label>
             <input className="li-settings-input" value={form.location} onChange={e => update('location', e.target.value)} style={{ width: '100%' }} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>About</label>
+            <textarea className="li-settings-input" value={form.about} onChange={e => update('about', e.target.value)} style={{ width: '100%', minHeight: 80, resize: 'vertical' }} maxLength={2600} placeholder="Tell your professional story..." />
+            <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'right', marginTop: 4 }}>{form.about.length}/2600</div>
           </div>
         </div>
         <div className="li-modal__footer">

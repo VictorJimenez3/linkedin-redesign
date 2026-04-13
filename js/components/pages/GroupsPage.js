@@ -2,7 +2,7 @@
    GROUPSPAGE.JS — Groups listing
    ============================================================ */
 function GroupsPage() {
-  const { showToast, joinedGroups, joinGroup, leaveGroup } = React.useContext(AppContext);
+  const { showToast, openModal, joinedGroups, joinGroup, leaveGroup } = React.useContext(AppContext);
   const { data: groups, loading, error } = useFetch(API.getGroups, []);
   const [tab, setTab] = React.useState('my-groups');
   const joined = joinedGroups;
@@ -20,7 +20,7 @@ function GroupsPage() {
     <div className="li-page-inner" style={{ maxWidth: 900 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700 }}>Groups</h1>
-        <button className="li-btn li-btn--outline li-btn--sm" onClick={() => showToast('Create group — coming soon')}>
+        <button className="li-btn li-btn--outline li-btn--sm" onClick={() => openModal('create-group')}>
           + Create group
         </button>
       </div>

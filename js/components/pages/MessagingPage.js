@@ -8,11 +8,15 @@ function MessagingPage() {
   const { currentUser, showToast, setUnreadMessages } = React.useContext(AppContext);
 
   const { data: conversations, loading } = useFetch(API.getConversations, []);
+  const [localConversations, setLocalConversations] = React.useState(null);
   const [selectedId, setSelectedId] = React.useState(null);
   const [messages, setMessages] = React.useState([]);
   const [msgLoading, setMsgLoading] = React.useState(false);
   const [draft, setDraft] = React.useState('');
   const [search, setSearch] = React.useState('');
+  const [composing, setComposing] = React.useState(false);
+  const [composeSearch, setComposeSearch] = React.useState('');
+  const [networkUsers, setNetworkUsers] = React.useState([]);
   const messagesEndRef = React.useRef(null);
 
   // Panels (user stories live in Messaging like your original requirement)
@@ -26,12 +30,22 @@ function MessagingPage() {
   const [readinessLoading, setReadinessLoading] = React.useState(false);
   const [readinessError, setReadinessError] = React.useState(null);
 
+  // Sync conversations from fetch into local state
+  React.useEffect(() => {
+    if (conversations) setLocalConversations(conversations);
+  }, [conversations]);
+
   // Auto-select first conversation
   React.useEffect(() => {
     if (conversations && conversations.length > 0 && !selectedId) {
       selectConversation(conversations[0].id);
     }
   }, [conversations]);
+
+  // Load users for compose picker
+  React.useEffect(() => {
+    API.getUsers?.().then(u => setNetworkUsers(u || [])).catch(() => {});
+  }, []);
 
   // Mark all read when page mounts (P3 simplification)
   React.useEffect(() => {
@@ -61,6 +75,25 @@ function MessagingPage() {
         setMessages([]);
         setMsgLoading(false);
       });
+  }
+
+  function startConversation(user) {
+    setComposing(false);
+    setComposeSearch('');
+    // Check if conversation with this user already exists
+    const existing = (localConversations || []).find(c =>
+      String(c.participant?.id || c.participantId) === String(user.id)
+    );
+    if (existing) {
+      selectConversation(existing.id);
+      return;
+    }
+    API.createConversation(user.id)
+      .then(conv => {
+        setLocalConversations(prev => [conv, ...(prev || [])]);
+        selectConversation(conv.id);
+      })
+      .catch(() => showToast('Could not start conversation', 'error'));
   }
 
   function sendMessage() {
@@ -261,11 +294,14 @@ function MessagingPage() {
 
   if (loading) return <LoadingSpinner text="Loading messages..." />;
 
-  const allConversations = conversations || [];
+  const allConversations = localConversations || conversations || [];
   const filteredConvs = search
     ? allConversations.filter(c => (c.participantName || '').toLowerCase().includes(search.toLowerCase()))
     : allConversations;
   const selectedConv = allConversations.find(c => c.id === selectedId);
+  const filteredNetworkUsers = composeSearch
+    ? networkUsers.filter(u => u.name.toLowerCase().includes(composeSearch.toLowerCase()))
+    : networkUsers;
 
   const guideState = selectedId ? guideStateByConv[selectedId] : null;
 
@@ -280,29 +316,78 @@ function MessagingPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700 }}>Messaging</h2>
               <div style={{ display: 'flex', gap: 4 }}>
-                <button className="li-btn li-btn--ghost" style={{ padding: 4 }}
-                  onClick={() => showToast('New message — coming soon')}>
-                  Write
-                </button>
-                <button className="li-btn li-btn--ghost" style={{ padding: 4 }}
-                  onClick={() => showToast('Settings — coming soon')}>
-                  Settings
-                </button>
-              </div>
+  <button
+    className="li-btn li-btn--ghost"
+    style={{ padding: '4px 8px', fontSize: 12 }}
+    onClick={() => showToast('New message \u2014 coming soon')}
+    title="New message"
+  >
+    Write
+  </button>
+
+  <button
+    className="li-btn li-btn--ghost"
+    style={{ padding: 4 }}
+    onClick={() => showToast('Settings \u2014 coming soon')}
+  >
+    Settings
+  </button>
+</div>
             </div>
 
+            {/* Compose picker */}
+            {composing && (
+              <div style={{ marginBottom: 8 }}>
+                <input
+                  autoFocus
+                  className="li-input"
+                  placeholder="Search your network..."
+                  value={composeSearch}
+                  onChange={e => setComposeSearch(e.target.value)}
+                  style={{ width: '100%', marginBottom: 6 }}
+                />
+                <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--white)' }}>
+                  {filteredNetworkUsers.slice(0, 20).map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => startConversation(u)}
+                      style={{ width: '100%', textAlign: 'left', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <Avatar name={u.name} size={28} colorOverride={u.avatarColor} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{u.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(u.headline || '').split('|')[0].trim()}</div>
+                      </div>
+                    </button>
+                  ))}
+                  {filteredNetworkUsers.length === 0 && (
+                    <div style={{ padding: '12px 10px', fontSize: 13, color: 'var(--text-3)' }}>No users found</div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Search */}
-            <input
-              className="li-input"
-              placeholder="Search messages"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%' }}
-            />
+            {!composing && (
+              <input
+                className="li-input"
+                placeholder="Search messages"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ width: '100%' }}
+              />
+            )}
           </div>
 
           {/* Conversation list */}
           <div style={{ overflowY: 'auto', flex: 1 }}>
+            {!composing && filteredConvs.length === 0 && (
+              <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+                {search ? 'No conversations match your search.' : 'No messages yet. Use ✏ New to message someone in your network.'}
+              </div>
+            )}
             {filteredConvs.map(c => (
               <button
                 key={c.id}
@@ -327,10 +412,21 @@ function MessagingPage() {
 
         {/* Right panel — chat */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {!selectedConv && allConversations.length === 0 && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)', gap: 12, padding: 32 }}>
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ color: 'var(--text-3)' }}>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>Your inbox is empty</div>
+              <div style={{ fontSize: 13, textAlign: 'center', maxWidth: 260 }}>
+                Connect with people on the Network page to start conversations.
+              </div>
+            </div>
+          )}
           {/* Chat header */}
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
             <h2 style={{ fontWeight: 800, fontSize: 15, margin: 0 }}>
-              {selectedConv ? (selectedConv.participantName || 'Conversation') : 'Select a conversation'}
+              {selectedConv ? (selectedConv.participant?.name || selectedConv.participantName || 'Conversation') : 'Select a conversation'}
             </h2>
             <div style={{ flex: 1 }} />
 

@@ -2,7 +2,7 @@
    FEEDPAGE.JS — Main feed (matches original app.js quality)
    ============================================================ */
 function FeedPage() {
-  const { currentUser, likedPosts, toggleLike, following, follow, openModal, showToast } = React.useContext(AppContext);
+  const { currentUser, likedPosts, toggleLike, following, follow, connections, openModal, showToast } = React.useContext(AppContext);
   const { data: posts, loading, error } = useFetch(API.getFeed, []);
   const { data: news } = useFetch(API.getNews, []);
   const { data: hashtags } = useFetch(API.getHashtags, []);
@@ -25,7 +25,12 @@ function FeedPage() {
     </div>
   );
 
-  const rawPosts = localPosts || [];
+  const rawPosts = (localPosts || []).filter(post => {
+    const authorId = String(post.authorId || post.author?.id || '');
+    if (!authorId) return true; // no author info → always show
+    const myId = String((currentUser || {}).id || '');
+    return authorId === myId || (connections || new Set()).has(authorId);
+  });
   const allPosts = feedSort === 'Recent'
     ? [...rawPosts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     : [...rawPosts].sort((a, b) => {
@@ -424,7 +429,7 @@ function FeedPost({ post, liked, onLike, commentsOpen, onToggleComments, followi
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-          {!isFollowingAuthor && (
+          {!isFollowingAuthor && String(authorId) !== String(currentUser?.id) && (
             <button
               onClick={() => { onFollow(authorId); showToast(`Following ${authorName}`); }}
               style={{ border: '1px solid var(--blue)', color: 'var(--blue)', background: 'none', borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>

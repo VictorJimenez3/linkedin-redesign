@@ -38,6 +38,7 @@ function AppProvider({ children }) {
   });
   const [unreadMessages, setUnreadMessages] = React.useState(0);
   const [unreadNotifications, setUnreadNotifications] = React.useState(0);
+  const [pendingInvitations, setPendingInvitations] = React.useState([]);
 
   const [darkMode, setDarkMode] = React.useState(
     () => localStorage.getItem('li-dark-mode') === '1'
@@ -64,6 +65,15 @@ function AppProvider({ children }) {
     }
   });
 
+  // Helper to get user-scoped localStorage key
+  const userIdRef = React.useRef(null);
+  React.useEffect(() => { userIdRef.current = currentUser?.id ?? null; }, [currentUser]);
+  function _save(key, set) {
+    const uid = userIdRef.current;
+    if (!uid) return;
+    try { localStorage.setItem(`${key}-${uid}`, JSON.stringify([...set])); } catch (_) {}
+  }
+
   // ── Modal state ───────────────────────────────────────────
   const [activeModal, setActiveModal] = React.useState(null);
   const [modalData, setModalData] = React.useState(null);
@@ -71,33 +81,54 @@ function AppProvider({ children }) {
   // ── Toast state ───────────────────────────────────────────
   const [toasts, setToasts] = React.useState([]);
 
+  // ── Load user-scoped state once currentUser is known ─────
+  React.useEffect(() => {
+    if (!currentUser) return;
+    const uid = currentUser.id;
+    try {
+      const c = localStorage.getItem(`li-connections-${uid}`);
+      if (c) setConnections(new Set(JSON.parse(c)));
+      const f = localStorage.getItem(`li-following-${uid}`);
+      if (f) setFollowing(new Set(JSON.parse(f)));
+      const l = localStorage.getItem(`li-liked-posts-${uid}`);
+      if (l) setLikedPosts(new Set(JSON.parse(l)));
+    } catch (_) {}
+  }, [currentUser?.id]);
+
   // ── Bootstrap: fetch current user on mount ────────────────
   React.useEffect(() => {
     API.getMe()
       .then(user => {
         setCurrentUser(user);
         setAppLoading(false);
-        // Pre-populate UI state from user data
-        if (user.connections) {
-          // Seed connections Set from API if needed
-        }
       })
       .catch(err => {
-        setAppError(err.message);
-        setAppLoading(false);
+        if (err.status === 401) {
+          // Session expired or invalid — clear stored credentials and go to login
+          try {
+            localStorage.removeItem('nx-token');
+            localStorage.removeItem('nx-uid');
+          } catch (_) {}
+          window.location.href = 'index.html';
+        } else {
+          setAppError(err.message);
+          setAppLoading(false);
+        }
       });
   }, []);
 
-  // Fetch unread counts on mount
+  // Fetch unread counts and invitations on mount
   React.useEffect(() => {
     Promise.all([
       API.getConversations().catch(() => []),
       API.getNotifications().catch(() => []),
-    ]).then(([convs, notifs]) => {
+      API.getInvitations().catch(() => []),
+    ]).then(([convs, notifs, invs]) => {
       const msgs = convs.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
       const unreadNotifs = notifs.filter(n => !n.isRead).length;
       setUnreadMessages(msgs);
       setUnreadNotifications(unreadNotifs);
+      setPendingInvitations(invs || []);
     });
   }, []);
 
@@ -119,7 +150,7 @@ function AppProvider({ children }) {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
-      try { localStorage.setItem('li-liked-posts', JSON.stringify([...next])); } catch {}
+      _save('li-liked-posts', next);
       return next;
     });
     API.likePost(postId).catch(() => {});
@@ -147,7 +178,7 @@ function AppProvider({ children }) {
   function acceptConnection(userId) {
     setConnections(prev => {
       const next = new Set([...prev, String(userId)]);
-      try { localStorage.setItem('li-connections', JSON.stringify([...next])); } catch {}
+      _save('li-connections', next);
       return next;
     });
     setPendingConnections(prev => {
@@ -166,6 +197,15 @@ function AppProvider({ children }) {
     });
   }
 
+  function resolveInvitation(invName) {
+    setPendingInvitations(prev =>
+      prev.filter(inv => {
+        const name = (inv.user || inv).name || inv.senderName || '';
+        return name !== invName;
+      })
+    );
+  }
+
   function applyJob(jobId) {
     setAppliedJobs(prev => {
       const next = new Set([...prev, String(jobId)]);
@@ -180,7 +220,7 @@ function AppProvider({ children }) {
       const key = String(userId);
       if (next.has(key)) next.delete(key);
       else next.add(key);
-      try { localStorage.setItem('li-following', JSON.stringify([...next])); } catch {}
+      _save('li-following', next);
       return next;
     });
   }
@@ -245,6 +285,8 @@ function AppProvider({ children }) {
     setCurrentUser,
     dismissedInvitations,
     dismissInvitation,
+    pendingInvitations,
+    resolveInvitation,
     appliedJobs,
     applyJob,
     joinedGroups,

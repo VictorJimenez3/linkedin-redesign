@@ -27,22 +27,22 @@ def run_tests(test_file, cov_module):
     return result.returncode == 0  # True = tests pass (mutant SURVIVED), False = killed
 
 def apply_mutation(source_path, old, new):
-    with open(source_path, "r") as f:
+    with open(source_path, "r", encoding="utf-8") as f:
         original = f.read()
     mutated = original.replace(old, new, 1)
     if mutated == original:
         return None, original  # mutation not applicable
-    with open(source_path, "w") as f:
+    with open(source_path, "w", encoding="utf-8") as f:
         f.write(mutated)
     return mutated, original
 
 def restore(source_path, original):
-    with open(source_path, "w") as f:
+    with open(source_path, "w", encoding="utf-8") as f:
         f.write(original)
     # Clear bytecode cache so pytest uses fresh source, not stale .pyc
     pycache = os.path.join(os.path.dirname(source_path), "__pycache__")
     if os.path.isdir(pycache):
-        shutil.rmtree(pycache)
+        shutil.rmtree(pycache, ignore_errors=True)
 
 def run_mutation_suite(source_file, test_file, cov_module, mutations):
     source_path = os.path.join(BASE_DIR, source_file)

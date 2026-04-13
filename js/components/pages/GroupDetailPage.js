@@ -2,7 +2,7 @@
    GROUPDETAILPAGE.JS — Single group view
    ============================================================ */
 function GroupDetailPage({ groupId }) {
-  const { showToast, joinedGroups, joinGroup, leaveGroup } = React.useContext(AppContext);
+  const { showToast, openModal, joinedGroups, joinGroup, leaveGroup } = React.useContext(AppContext);
   const { data: group, loading, error } = useFetch(() => API.getGroup(groupId), [groupId]);
   const [tab, setTab] = React.useState('posts');
   const joined = joinedGroups.has(String(groupId));
@@ -87,7 +87,7 @@ function GroupDetailPage({ groupId }) {
                 cursor: 'pointer', boxSizing: 'border-box',
               }}
               rows={1}
-              onClick={() => showToast('Post creation — coming soon')}
+              onClick={() => openModal('post')}
               readOnly
             />
           </div>

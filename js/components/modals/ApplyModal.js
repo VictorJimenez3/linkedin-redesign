@@ -6,6 +6,8 @@ function ApplyModal() {
   const job = modalData && modalData.job ? modalData.job : null;
   const [step, setStep] = React.useState(1);
   const TOTAL_STEPS = 3;
+  const [resumeFile, setResumeFile] = React.useState(null);
+  const fileInputRef = React.useRef(null);
 
   // Form state
   const [form, setForm] = React.useState({
@@ -89,13 +91,27 @@ function ApplyModal() {
           {step === 2 && (
             <div>
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Resume</h3>
-              <div style={{ border: '2px dashed var(--border)', borderRadius: 8, padding: 32, textAlign: 'center', marginBottom: 16, cursor: 'pointer' }}
-                onClick={() => showToast('File selector — coming soon')}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="var(--text-3)" style={{ marginBottom: 8 }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files && e.target.files[0];
+                  if (!file) return;
+                  if (file.size > 5 * 1024 * 1024) { showToast('File too large — max 5MB', 'error'); return; }
+                  setResumeFile(file);
+                  showToast(`${file.name} selected`, 'success');
+                }}
+              />
+              <div
+                style={{ border: resumeFile ? '2px solid var(--blue)' : '2px dashed var(--border)', borderRadius: 8, padding: 32, textAlign: 'center', marginBottom: 16, cursor: 'pointer', background: resumeFile ? 'var(--blue-light, #EAF4FF)' : 'transparent' }}
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill={resumeFile ? '#0F5DBD' : 'var(--text-3)'} style={{ marginBottom: 8 }}>
                   <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
                 </svg>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>Upload resume</div>
-                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 4 }}>PDF, DOC, DOCX (Max 5MB)</div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{resumeFile ? resumeFile.name : 'Upload resume'}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 4 }}>{resumeFile ? 'Click to change file' : 'PDF, DOC, DOCX (Max 5MB)'}</div>
               </div>
               <div style={{ textAlign: 'center', color: 'var(--text-2)', fontSize: 14, marginBottom: 16 }}>— or use your Nexus profile —</div>
               <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 16, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: 'var(--blue-light, #EAF4FF)' }}

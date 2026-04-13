@@ -381,9 +381,7 @@ def create_conversation():
 @app.route("/api/conversations")
 def get_conversations_list():
     """GET /api/conversations — message threads for the current user."""
-    user = _auth_user()
-    uid = user["id"] if user else 1
-    return jsonify(dbl.get_conversations_for_user(uid))
+    return jsonify(dbl.get_all_conversations())
 
 
 @app.route("/api/conversations/<int:conv_id>")
